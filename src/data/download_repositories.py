@@ -36,7 +36,7 @@ def download_repository(repository, repositories_path):
     :rtype: dict or None
     """
     repository_name = repository.split('/')[1]
-    repository_url = 'https://github.com/'+repository+'.git'
+    repository_url = 'https://github.com/' + repository + '.git'
     repository_dir = repositories_path / repository_name
     if repository_dir.is_dir():
         print(f"Repository already exists: {repository_name}")
@@ -77,7 +77,7 @@ def download_repositories(repositories, repositories_path):
     return result
 
 
-def find_pr_files(dataset_path):
+def find_sharings_files(dataset_path):
     """
     Finds files with pull request sharings
 
@@ -88,24 +88,34 @@ def find_pr_files(dataset_path):
     for path in list(dataset_path.iterdir()):
         if 'snapshot' in str(path) and path.is_dir():
             snapshot_paths.append(path)
+    commit_sharings_paths = []
+    issue_sharings_paths = []
     pr_sharings_paths = []
     for snapshot_path in snapshot_paths:
         snapshot_content_paths = list(snapshot_path.iterdir())
         for snapshot_content_path in snapshot_content_paths:
+            if 'issue_sharings.json' in str(snapshot_content_path):
+                issue_sharings_paths.append(snapshot_content_path)
+            if 'commit_sharings.json' in str(snapshot_content_path):
+                commit_sharings_paths.append(snapshot_content_path)
             if 'pr_sharings.json' in str(snapshot_content_path):
                 pr_sharings_paths.append(snapshot_content_path)
-    return pr_sharings_paths
+
+    return commit_sharings_paths, issue_sharings_paths, pr_sharings_paths
 
 
-def load_pr_sharings(pr_sharings_path):
-    """
+def load_sharings(sharings_path):
+    with open(sharings_path) as sharings_file:
+        sharings = json.load(sharings_file)
+    df = pd.DataFrame.from_records(sharings['Sources'])
+    return df
 
-    :param pr_sharings_path:
-    :return:
-    """
-    with open(pr_sharings_path) as pr_sharings_file:
-        pr_sharings = json.load(pr_sharings_file)
-    df = pd.DataFrame.from_records(pr_sharings['Sources'])
+
+def combine_sharings(sharings_paths):
+    dfs = []
+    for sharing_path in sharings_paths:
+        dfs.append(load_sharings(sharing_path))
+    df = pd.concat(dfs)
     return df
 
 
@@ -123,13 +133,17 @@ def main():
 
     print(f"Reading data about dataset from '{dataset_directory_path}'...", file=sys.stderr)
 
-    dataset_pr_sharings_paths = find_pr_files(dataset_directory_path)
+    commit_sharings_paths, issue_sharings_paths, pr_sharings_paths = find_pr_files(dataset_directory_path)
 
-    dfs = []
-    for dataset_pr_sharing_path in dataset_pr_sharings_paths:
-        dfs.append(load_pr_sharings(dataset_pr_sharing_path))
-    df = pd.concat(dfs)
-    repositories = list(df['RepoName'].unique())
+    commit_df = combine_sharings(commit_sharings_paths)
+    issue_df = combine_sharings(issue_sharings_paths)
+    pr_df = combine_sharings(pr_sharings_paths)
+
+    commit_repositories = list(commit_df['RepoName'].unique())
+    issue_repositories = list(issue_df['RepoName'].unique())
+    pr_repositories = list(pr_df['RepoName'].unique())
+
+    repositories = list(set(commit_repositories + issue_repositories + pr_repositories))
 
     print(f"Cloning {len(repositories)} repositories into '{repositories_path}'...", file=sys.stderr)
     cloned_data = download_repositories(repositories, repositories_path)
