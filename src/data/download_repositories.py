@@ -133,7 +133,7 @@ def main():
 
     print(f"Reading data about dataset from '{dataset_directory_path}'...", file=sys.stderr)
 
-    commit_sharings_paths, issue_sharings_paths, pr_sharings_paths = find_pr_files(dataset_directory_path)
+    commit_sharings_paths, issue_sharings_paths, pr_sharings_paths = find_sharings_files(dataset_directory_path)
 
     commit_df = combine_sharings(commit_sharings_paths)
     issue_df = combine_sharings(issue_sharings_paths)
