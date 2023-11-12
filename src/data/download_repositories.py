@@ -25,7 +25,7 @@ ERROR_ARGS = 1
 PRETTY_PRINT_OUTPUT = True
 
 
-def download_repository(repository, repositories_path):
+def download_repository(repository, repositories_path, verbose=True):
     """Clones git repository `repository` into `repositories_path`
 
     Assumes existing directories are already cloned repositories,
@@ -33,6 +33,7 @@ def download_repository(repository, repositories_path):
 
     :param repository: string in format "owner/repository"
     :param Path repositories_path: path to directory where to download repositories
+    :param bool verbose: whether to print non-error debugging-like information
     :return: dictionary with information about cloned repository, or None on failure
     :rtype: dict or None
     """
@@ -40,7 +41,9 @@ def download_repository(repository, repositories_path):
     repository_url = 'https://github.com/' + repository + '.git'
     repository_dir = repositories_path / repository_name
     if repository_dir.is_dir():
-        print(f"Repository already exists: {repository_name}")
+        if verbose:
+            print(f"Repository already exists: {repository_name}")
+
         return {
             'project': repository_name,
             'repository_url': repository_url,
@@ -71,7 +74,7 @@ def download_repositories(repositories, repositories_path):
     """
     result = []
     for repository in tqdm(repositories, desc='repositories'):
-        repo_info = download_repository(repository, repositories_path)
+        repo_info = download_repository(repository, repositories_path, verbose=False)
         if repo_info is not None:
             result.append(repo_info)
 
