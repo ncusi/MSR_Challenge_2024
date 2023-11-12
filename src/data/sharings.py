@@ -37,3 +37,35 @@ def find_sharings_files(dataset_path):
                 pr_sharings_paths.append(snapshot_content_path)
 
     return SharingsPaths(commit_sharings_paths, issue_sharings_paths, pr_sharings_paths)
+
+
+def find_most_recent_sharings_files(dataset_path, verbose=True):
+    """Find all sharings from most recent snapshot in DevGPT dataset
+
+    :param Path dataset_path: path to directory with DevGPT dataset
+    :param bool verbose: whether to print debugging-like information,
+        `true` by default
+    :return: mapping from sharings type to sharings file, for example
+        {'commit': Path('20231012_230826_commit_sharings.json')}
+    :rtype: dict[str, PathLike]
+    """
+    snapshot_paths = list(dataset_path.glob('snapshot_*'))
+    latest_snapshot_path = sorted(snapshot_paths, reverse=True)[0]
+    if verbose:
+        print(f"Latest snapshot is '{latest_snapshot_path}'", file=sys.stderr)
+
+    sharings_files = {}
+    for sharings_file_path in latest_snapshot_path.glob('*_sharings.json'):
+        # file name pattern: <YMD>_<HMS>_<type>_sharings.json
+        # for example '20231012_230826_commit_sharings.json'
+        sharings_type = str(sharings_file_path).split('_')[-2]
+        sharings_files[sharings_type] = sharings_file_path
+
+    link_sharings_path = latest_snapshot_path.joinpath('ChatGPT_Link_Sharing.csv')
+    if link_sharings_path.exists():
+        sharings_files['link'] = link_sharings_path
+
+    if verbose:
+        print(f"Found sharings for {sorted(sharings_files.keys())}", file=sys.stderr)
+
+    return sharings_files
