@@ -15,6 +15,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
+from src.data.sharings import find_sharings_files
 from src.utils.functools import timed
 from src.utils.git import GitRepo
 
@@ -75,33 +76,6 @@ def download_repositories(repositories, repositories_path):
             result.append(repo_info)
 
     return result
-
-
-def find_sharings_files(dataset_path):
-    """
-    Finds files with pull request sharings
-
-    :param dataset_path: path to directory with DevGPT dataset
-    :return: list of file paths with pr sharings
-    """
-    snapshot_paths = []
-    for path in list(dataset_path.iterdir()):
-        if 'snapshot' in str(path) and path.is_dir():
-            snapshot_paths.append(path)
-    commit_sharings_paths = []
-    issue_sharings_paths = []
-    pr_sharings_paths = []
-    for snapshot_path in snapshot_paths:
-        snapshot_content_paths = list(snapshot_path.iterdir())
-        for snapshot_content_path in snapshot_content_paths:
-            if 'issue_sharings.json' in str(snapshot_content_path):
-                issue_sharings_paths.append(snapshot_content_path)
-            if 'commit_sharings.json' in str(snapshot_content_path):
-                commit_sharings_paths.append(snapshot_content_path)
-            if 'pr_sharings.json' in str(snapshot_content_path):
-                pr_sharings_paths.append(snapshot_content_path)
-
-    return commit_sharings_paths, issue_sharings_paths, pr_sharings_paths
 
 
 def load_sharings(sharings_path):
