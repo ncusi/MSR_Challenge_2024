@@ -125,6 +125,7 @@ def main():
     print(f"Cloning {len(repositories)} repositories into '{repositories_path}'...", file=sys.stderr)
     cloned_data = download_repositories(repositories, repositories_path)
 
+    output_file_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Writing output data to '{output_file_path}'...", file=sys.stderr)
     with open(output_file_path, 'w') as output_file:
         if PRETTY_PRINT_OUTPUT:
