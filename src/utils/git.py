@@ -25,6 +25,8 @@ from enum import Enum
 from os import PathLike
 from pathlib import Path
 
+from unidiff import PatchSet
+
 
 class DiffSide(Enum):
     """Enum to be used for `side` parameter of `GitRepo.list_changed_files`"""
@@ -321,6 +323,22 @@ class GitRepo:
         process.wait()  # to avoid ResourceWarning: subprocess NNN is still running
 
         return result
+
+    def unidiff(self, commit='HEAD', prev=None):
+        if prev is None:
+            # NOTE: this means first-parent changes for merge commits
+            prev = commit + '^'
+
+        cmd = [
+            'git', '-C', self.repo,
+            'diff', '--find-renames', '--find-copies', '--find-copies-harder',
+            prev, commit
+        ]
+        process = subprocess.run(cmd,
+                                 capture_output=True, check=True,
+                                 encoding=self.default_file_encoding)
+
+        return PatchSet(process.stdout)
 
     def _file_contents_process(self, commit, path):
         cmd = [

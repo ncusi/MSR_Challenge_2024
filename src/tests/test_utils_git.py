@@ -123,6 +123,49 @@ class GitTestCase(unittest.TestCase):
         actual = self.repo.diff_file_status('v2')
         self.assertCountEqual(actual, expected, "status of changed files in v2")
 
+    def test_unidiff(self):
+        """Test extracting data from GitRepo.unidiff"""
+        patch = self.repo.unidiff()
+        files = [f.path for f in patch]
+        expected = [
+            'new_file',  # file added in v2
+            'renamed_file',  # file renamed in v2 from 'example_file'
+            'subdir/subfile',  # file modified in v2 without name change
+        ]
+        self.assertCountEqual(files, expected, "extracted changed files match")
+        diffstat = {
+            f.path: (f.removed, f.added)
+            for f in patch
+        }
+        self.assertEqual(diffstat['new_file'][0], 0, "new file has no deletions")
+        self.assertEqual(diffstat['renamed_file'], (0, 0), "pure rename has no changes")
+        # before: 'subfile', after: 'subfile\nsubfile\n'
+        self.assertEqual(diffstat['subdir/subfile'], (1, 2), "changed file stats matches")
+
+        expected_src = {
+            # changed from 'subfile'
+            1: 'subfile'
+        }
+        expected_dst = {
+            # changes to 'subfile\nsubfile\n'
+            1: 'subfile',
+            2: 'subfile'
+        }
+        self.assertEqual(
+            {
+                line.source_line_no: line.value.strip()
+                # there is only one hunk in changes in 'subdir/subfiles' file
+                for line in patch[-1][0] if line.is_removed
+            }, expected_src, "pre-image on last file matches"
+        )
+        self.assertEqual(
+            {
+                line.target_line_no: line.value.strip()
+                # there is only one hunk in changes in 'subdir/subfiles' file
+                for line in patch[-1][0] if line.is_added
+            }, expected_dst, "post-image on last file matches"
+        )
+
     def test_file_contents(self):
         """Test that GitRepo.file_contents returns file contents as text"""
         expected = 'example'
