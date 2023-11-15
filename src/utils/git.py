@@ -551,4 +551,29 @@ class GitRepo:
 
         return process.stdout.strip()
 
+    def is_merged_into(self, commit, ref_pattern='HEAD'):
+        # support single patter or list of patterns
+        # TODO: use variable number of parameters instead (?)
+        if not isinstance(ref_pattern, list):
+            ref_pattern = [ref_pattern]
+
+        ref_pattern = filter(
+            # filter out cases of detached HEAD, resolved to None (no branch)
+            lambda x: x is not None,
+            map(
+                # resolve symbolic references, currently only 'HEAD' is resolved
+                lambda x: x if x != 'HEAD' else self.resolve_symbolic_ref(x),
+                ref_pattern
+            )
+        )
+
+        cmd = [
+            'git', '-C', self.repo,
+            'for-each-ref', f'--contains={commit}',  # only list refs which contain the specified commit
+            '--format=%(refname)',  # we only need list of refs that fulfill the condition mentioned above
+            *ref_pattern
+        ]
+        process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        return process.stdout.splitlines()
+
 # end of file utils/git.py
