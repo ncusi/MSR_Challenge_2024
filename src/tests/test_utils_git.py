@@ -186,6 +186,29 @@ class GitTestCase(unittest.TestCase):
         self.assertEqual(commit_info['committer']['committer'], 'A U Thor <author@example.com>',
                          "committer matches repository setup")
 
+    def test_is_valid_commit(self):
+        """Test that GitRepo.is_valid_commit returns correct answer
+
+        Tested only with references and <rev>^ notation, as the test repository
+        is not created in such way that SHA-1 identifiers are be stable; and
+        currently GitRepo class lack method that would turn <commit-ish> or
+        <object> into SHA-1 identifier.
+        """
+        # all are valid references that resolve to commit
+        self.assertTrue(self.repo.is_valid_commit("HEAD"), "HEAD is valid")
+        self.assertTrue(self.repo.is_valid_commit("v1"), "tag v1 is valid")
+        self.assertTrue(self.repo.is_valid_commit("v2"), "tag v2 is valid")
+
+        # all are not existing references
+        self.assertFalse(self.repo.is_valid_commit("non_existent"), "no 'non_existent' reference")
+
+        # <rev>^ notation within existing commit history
+        self.assertTrue(self.repo.is_valid_commit("HEAD^"), "HEAD^ is valid")
+
+        # <rev>^ notation leading outside existing commit history
+        self.assertFalse(self.repo.is_valid_commit("HEAD^3"), "HEAD^3 is invalid")
+        self.assertFalse(self.repo.is_valid_commit("HEAD~20"), "HEAD~20 is invalid")
+
 
 class GitClassMethodsTestCase(unittest.TestCase):
     def test_clone_repository(self):

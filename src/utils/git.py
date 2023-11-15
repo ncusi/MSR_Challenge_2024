@@ -510,4 +510,17 @@ class GitRepo:
 
         return result
 
+    def is_valid_commit(self, commit):
+        cmd = [
+            'git', '-C', self.repo,
+            'rev-parse', '--verify', '--end-of-options', str(commit)+'^{commit}'
+        ]
+        try:
+            # emits SHA-1 identifier if commit is found in the repo; otherwise, errors out
+            subprocess.run(cmd, capture_output=False, check=True)
+        except subprocess.CalledProcessError:
+            return False
+
+        return True
+
 # end of file utils/git.py
