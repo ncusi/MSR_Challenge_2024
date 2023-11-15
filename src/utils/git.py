@@ -523,4 +523,32 @@ class GitRepo:
 
         return True
 
+    def get_current_branch(self):
+        cmd = [
+            'git', '-C', self.repo,
+            'symbolic-ref', '--quiet', '--short', 'HEAD'
+        ]
+        try:
+            # Using '--quiet' means that the command would not issue an error message
+            # but exit with non-zero status silently if HEAD is not a symbolic ref, but detached HEAD
+            process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        except subprocess.CalledProcessError:
+            return None
+
+        return process.stdout.strip()
+
+    def resolve_symbolic_ref(self, ref='HEAD'):
+        cmd = [
+            'git', '-C', self.repo,
+            'symbolic-ref', '--quiet', str(ref)
+        ]
+        try:
+            # Using '--quiet' means that the command would not issue an error message
+            # but exit with non-zero status silently if `ref` is not a symbolic ref
+            process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        except subprocess.CalledProcessError:
+            return None
+
+        return process.stdout.strip()
+
 # end of file utils/git.py

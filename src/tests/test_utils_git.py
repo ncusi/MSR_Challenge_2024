@@ -12,6 +12,7 @@ from src.utils.git import GitRepo, DiffSide
 
 class GitTestCase(unittest.TestCase):
     repo_path = 'test_utils_git-repo'
+    default_branch = 'main'
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -31,6 +32,7 @@ class GitTestCase(unittest.TestCase):
         subprocess.run(['git', 'init', cls.repo_path], check=True, stdout=subprocess.DEVNULL)  # noisy
         subprocess.run(['git', '-C', cls.repo_path, 'config', 'user.name', 'A U Thor'], check=True)
         subprocess.run(['git', '-C', cls.repo_path, 'config', 'user.email', 'author@example.com'], check=True)
+        subprocess.run(['git', '-C', cls.repo_path, 'branch', '-m', cls.default_branch], check=True)
 
         # create files, and initial commit
         Path(cls.repo_path).joinpath('example_file').write_text('example')
@@ -151,11 +153,12 @@ class GitTestCase(unittest.TestCase):
         compared to less than 200 ms for the next slowest test.
         """
         beg_files = self.repo.list_files()  # at start
+        beg_branch = self.repo.get_current_branch()  # starting branch or None
 
         v1_expected = self.repo.list_files('v1')  # list of files at v1
-        self.repo.checkout_revision('v1')         # checkout v1
+        self.repo.checkout_revision('v1')         # checkout v1, detached HEAD
         v1_actual = self.repo.list_files('HEAD')  # list of files at checkout = v1
-        self.repo.checkout_revision('HEAD@{1}')   # back to the starting position
+        self.repo.checkout_revision(beg_branch or 'HEAD@{1}')   # back to the starting position
 
         end_files = self.repo.list_files()  # at end
 
@@ -208,6 +211,23 @@ class GitTestCase(unittest.TestCase):
         # <rev>^ notation leading outside existing commit history
         self.assertFalse(self.repo.is_valid_commit("HEAD^3"), "HEAD^3 is invalid")
         self.assertFalse(self.repo.is_valid_commit("HEAD~20"), "HEAD~20 is invalid")
+
+    def test_get_current_branch(self):
+        """Basic test of GitRepo.get_current_branch"""
+        self.assertEqual(self.repo.get_current_branch(), self.default_branch,
+                         f"current branch is default branch: '{self.default_branch}'")
+
+    def test_resolve_symbolic_ref(self):
+        """Test that GitRepo.resolve_symbolic_ref works correctly"""
+        self.assertEqual(
+            self.repo.resolve_symbolic_ref("HEAD"),
+            f'refs/heads/{self.default_branch}',
+            f"'HEAD' resolves to 'refs/heads/{self.default_branch}'"
+        )
+        self.assertIsNone(
+            self.repo.resolve_symbolic_ref("v2"),
+            "'v2' is not a symbolic ref"
+        )
 
 
 class GitClassMethodsTestCase(unittest.TestCase):
