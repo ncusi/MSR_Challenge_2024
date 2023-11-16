@@ -94,7 +94,10 @@ def _parse_commit_text(commit_text, with_parents_line=True, indented_body=True):
     return commit_data
 
 
+# used by _parse_blame_porcelain() function
 _blame_pattern = re.compile(r'^(?P<sha1>[0-9a-f]{40}) (?P<orig>[0-9]+) (?P<final>[0-9]+)')
+
+
 def _parse_blame_porcelain(blame_text):
     # https://git-scm.com/docs/git-blame#_the_porcelain_format
     blame_lines = blame_text.split('\n')
@@ -699,5 +702,21 @@ class GitRepo:
             process.stdout
         )
 
+    def changes_survival(self, commit, prev=None):
+        result = {}
+        changes_info = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
+        for file_path, line_extents in changes_info.items():
+            if not line_extents:
+                # empty changes, for example pure rename
+                continue
+
+            commits_data, lines_data = self.reverse_blame(commit, file_path,
+                                                          line_extents=line_extents)
+            for line_info in lines_data:
+                if 'previous' in commits_data[line_info['commit']]:
+                    line_info['previous'] = commits_data[line_info['commit']]['previous']
+            result[file_path] = lines_data
+
+        return result
 
 # end of file utils/git.py

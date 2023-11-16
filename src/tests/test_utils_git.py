@@ -338,6 +338,26 @@ class GitTestCase(unittest.TestCase):
             for blame_line, line_no in zip(line_data, line_extent, strict=True):
                 self.assertEqual(int(blame_line['final']), line_no, f"line number match for line number {line_no}")
 
+    def test_changes_survival(self):
+        with self.subTest("changes survival from v1.5"):
+            survival_info = self.repo.changes_survival("v1.5")
+            # single file changed, single line change, which survived
+            self.assertCountEqual(survival_info.keys(), ['subdir/subfile'])
+            self.assertEqual(len(survival_info['subdir/subfile']), 1)
+            self.assertNotIn('previous', survival_info['subdir/subfile'][0])
+
+        with self.subTest("changes survival from v1"):
+            survival_info = self.repo.changes_survival(commit="v1",
+                                                       prev=self.repo.empty_tree_sha1)
+            # two files created in v1
+            self.assertCountEqual(survival_info.keys(), [
+                'example_file',
+                'subdir/subfile',
+            ])
+            # changes in 'subdir/subfile' consist of single line that did not survive
+            self.assertEqual(len(survival_info['subdir/subfile']), 1)
+            self.assertIn('previous', survival_info['subdir/subfile'][0])
+
 
 class GitClassMethodsTestCase(unittest.TestCase):
     def test_clone_repository(self):
