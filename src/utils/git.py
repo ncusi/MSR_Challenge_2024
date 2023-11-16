@@ -605,13 +605,13 @@ class GitRepo:
 
         return process.stdout.strip()
 
-    def is_merged_into(self, commit, ref_pattern='HEAD'):
+    def _to_refs_list(self, ref_pattern='HEAD'):
         # support single patter or list of patterns
         # TODO: use variable number of parameters instead (?)
         if not isinstance(ref_pattern, list):
             ref_pattern = [ref_pattern]
 
-        ref_pattern = filter(
+        return filter(
             # filter out cases of detached HEAD, resolved to None (no branch)
             lambda x: x is not None,
             map(
@@ -620,6 +620,9 @@ class GitRepo:
                 ref_pattern
             )
         )
+
+    def is_merged_into(self, commit, ref_pattern='HEAD'):
+        ref_pattern = self._to_refs_list(ref_pattern)
 
         cmd = [
             'git', '-C', self.repo,
