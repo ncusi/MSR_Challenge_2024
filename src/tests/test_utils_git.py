@@ -43,6 +43,12 @@ class GitTestCase(unittest.TestCase):
                        check=True, stdout=subprocess.DEVNULL)  # noisy
         subprocess.run(['git', '-C', cls.repo_path, 'tag', 'v1'])
 
+        # intermediate commit, for testing blame
+        Path(cls.repo_path).joinpath('subdir', 'subfile').write_text('subfile\n')
+        subprocess.run(['git', '-C', cls.repo_path, 'commit', '-a', '-m', 'Change subdir/subfile'],
+                       check=True, stdout=subprocess.DEVNULL)  # noisy
+        subprocess.run(['git', '-C', cls.repo_path, 'tag', 'v1.5'])
+
         # add new file
         Path(cls.repo_path).joinpath('new_file').write_text(''.join([f"{i}\n" for i in range(10)]))
         subprocess.run(['git', '-C', cls.repo_path, 'add', 'new_file'], check=True)
@@ -140,15 +146,15 @@ class GitTestCase(unittest.TestCase):
         self.assertEqual(diffstat['new_file'][0], 0, "new file has no deletions")
         self.assertEqual(diffstat['renamed_file'], (0, 0), "pure rename has no changes")
         # before: 'subfile', after: 'subfile\nsubfile\n'
-        self.assertEqual(diffstat['subdir/subfile'], (1, 2), "changed file stats matches")
+        self.assertEqual(diffstat['subdir/subfile'], (0, 1), "changed file stats matches")
 
         expected_src = {
-            # changed from 'subfile'
-            1: 'subfile'
+            # changed from 'subfile\n'
+            #1: 'subfile'
         }
         expected_dst = {
             # changes to 'subfile\nsubfile\n'
-            1: 'subfile',
+            #1: 'subfile',
             2: 'subfile'
         }
         self.assertEqual(
@@ -171,7 +177,7 @@ class GitTestCase(unittest.TestCase):
         expected = {
             'new_file': [(1,10)],  # whole file added in v2
             'renamed_file': [],  # file renamed in v2 from 'example_file', no changes
-            'subdir/subfile': [(1,2)],  # file modified in v2 without name change
+            'subdir/subfile': [(2,2)],  # file modified in v2 without name change
         }
         self.assertEqual(actual, expected, "changed lines for post-image for changed files match")
 
@@ -219,7 +225,7 @@ class GitTestCase(unittest.TestCase):
 
     def test_list_tags(self):
         """Test that GitRepo.list_tags list all tags"""
-        expected = ['v1', 'v2']
+        expected = ['v1', 'v1.5', 'v2']
         actual = self.repo.list_tags()
 
         self.assertEqual(actual, expected, "list of tags matches")
@@ -289,9 +295,10 @@ class GitTestCase(unittest.TestCase):
         expected = [
             f'refs/heads/{self.default_branch}',
             'refs/tags/v1',
+            'refs/tags/v1.5',
             'refs/tags/v2',
         ]
-        self.assertCountEqual(actual, expected, "'v1' is merged into HEAD, v1, v2")
+        self.assertCountEqual(actual, expected, "'v1' is merged into HEAD, v1, v1.5, v2")
         actual = self.repo.is_merged_into('v2', 'refs/tags/v1')
         self.assertFalse(actual, "'v2' is not merged into v1")
 
