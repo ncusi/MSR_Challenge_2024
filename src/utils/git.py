@@ -94,6 +94,48 @@ def _parse_commit_text(commit_text, with_parents_line=True, indented_body=True):
     return commit_data
 
 
+_blame_pattern = re.compile(r'^(?P<sha1>[0-9a-f]{40}) (?P<orig>[0-9]+) (?P<final>[0-9]+)')
+def _parse_blame_porcelain(blame_text):
+    # https://git-scm.com/docs/git-blame#_the_porcelain_format
+    blame_lines = blame_text.split('\n')
+    if not blame_lines:
+        # TODO: return NamedTuple
+        return {}, []
+
+    curr_commit = None
+    curr_line = {}
+    commits_data = {}
+    line_data = []
+
+    for line in blame_lines:
+        if not line:  # empty line, shouldn't happen
+            continue
+
+        if match := _blame_pattern.match(line):
+            curr_commit = match.group('sha1')
+            curr_line = {
+                'commit': curr_commit,
+                'original': match.group('orig'),
+                'final': match.group('final')
+            }
+        elif line.startswith('\t'):  # TAB
+            # the contents of the actual line
+            curr_line['line'] = line[1:]  # remove leading TAB
+            line_data.append(curr_line)
+        else:
+            # other header
+            if curr_commit not in commits_data:
+                commits_data[curr_commit] = {}
+            try:
+                # e.g. 'author A U Thor'
+                key, value = line.split(' ', maxsplit=1)
+            except ValueError:
+                # e.g. 'boundary'
+                key, value = (line, True)
+            commits_data[curr_commit][key] = value
+
+    return commits_data, line_data
+
 class GitRepo:
     """Class representing Git repository, for performing operations on"""
     path_encoding = 'utf8'
@@ -632,5 +674,25 @@ class GitRepo:
         ]
         process = subprocess.run(cmd, capture_output=True, check=True, text=True)
         return process.stdout.splitlines()
+
+    def reverse_blame(self, commit, file, ref_pattern='HEAD', line_extents=None):
+        ref_pattern = self._to_refs_list(ref_pattern)
+
+        line_args = []
+        if line_extents is not None:
+            for beg, end in line_extents:
+                line_args.extend(['-L', f'{beg},{end}'])
+
+        cmd = [
+            'git', '-C', self.repo,
+            'blame', '--reverse', commit, '--porcelain',
+            *line_args,
+            file
+        ]
+        process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        return _parse_blame_porcelain(
+            process.stdout
+        )
+
 
 # end of file utils/git.py

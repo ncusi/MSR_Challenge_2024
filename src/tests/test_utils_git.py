@@ -303,6 +303,41 @@ class GitTestCase(unittest.TestCase):
         actual = self.repo.is_merged_into('v2', 'refs/tags/v1')
         self.assertFalse(actual, "'v2' is not merged into v1")
 
+    def test_reverse_blame(self):
+        with self.subTest("reverse blame from v1.5"):
+            commits_data, line_data = self.repo.reverse_blame('v1.5', 'subdir/subfile')
+            # single line that survived
+            self.assertEqual(len(line_data), 1,"there was single line in v1.5")
+            blame_commit = line_data[0]['commit']
+            self.assertNotIn('previous', commits_data[blame_commit],
+                             "survived until commit with no previous (last commit)")
+            self.assertEqual(blame_commit, self.repo.to_oid("HEAD"),
+                             "reverse blame commit is HEAD (last commit)")
+
+        with self.subTest("reverse blame from v1"):
+            commits_data, line_data = self.repo.reverse_blame('v1', 'subdir/subfile')
+            # single line that did not survive even a single commit
+            # and that commit was v1.5, which is not the last commit
+            self.assertEqual(len(line_data), 1,"there was single line in v1")
+            blame_commit = line_data[0]['commit']
+            self.assertIn('previous', commits_data[blame_commit],
+                          "did not survive until commit with no previous (last commit)")
+            self.assertIn('boundary', commits_data[blame_commit],
+                          "was changed in subsequent commit")
+            self.assertEqual(blame_commit, self.repo.to_oid("v1"),
+                             "reverse blame commit is starting commit v1")
+
+        with self.subTest("reverse blame with line range"):
+            line_extent = (2, 3)
+            n_lines = line_extent[1] - line_extent[0] + 1
+            _, line_data = self.repo.reverse_blame(commit='v1', file='example_file',
+                                                   line_extents=[line_extent])
+            # requested two lines, got two lines
+            self.assertEqual(len(line_data), n_lines, f"reverse blame returned {n_lines} lines")
+            # line numbers match
+            for blame_line, line_no in zip(line_data, line_extent, strict=True):
+                self.assertEqual(int(blame_line['final']), line_no, f"line number match for line number {line_no}")
+
 
 class GitClassMethodsTestCase(unittest.TestCase):
     def test_clone_repository(self):
