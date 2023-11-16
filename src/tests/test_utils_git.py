@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from src.tests import slow_test
-from src.utils.git import GitRepo, DiffSide
+from src.utils.git import GitRepo, DiffSide, changes_survival_perc
 
 
 class GitTestCase(unittest.TestCase):
@@ -357,6 +357,8 @@ class GitTestCase(unittest.TestCase):
             # changes in 'subdir/subfile' consist of single line that did not survive
             self.assertEqual(len(survival_info['subdir/subfile']), 1)
             self.assertIn('previous', survival_info['subdir/subfile'][0])
+            # all 5 lines survived from 'example_file', 1 line in 'subdir/subfile' did not
+            self.assertEqual(changes_survival_perc(survival_info), (5, 5+1))
 
 
 class GitClassMethodsTestCase(unittest.TestCase):

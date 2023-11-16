@@ -140,6 +140,17 @@ def _parse_blame_porcelain(blame_text):
     return commits_data, line_data
 
 
+def changes_survival_perc(lines_survival):
+    lines_total = 0
+    lines_survived = 0
+    for _, lines_info in lines_survival.items():
+        lines_total += len(lines_info)
+        lines_survived += sum(1 for line_data in lines_info
+                              if 'previous' not in line_data)
+
+    return lines_survived, lines_total
+
+
 class GitRepo:
     """Class representing Git repository, for performing operations on"""
     path_encoding = 'utf8'
