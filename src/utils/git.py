@@ -25,6 +25,8 @@ from enum import Enum
 from os import PathLike
 from pathlib import Path
 
+from unidiff import PatchSet
+
 
 class DiffSide(Enum):
     """Enum to be used for `side` parameter of `GitRepo.list_changed_files`"""
@@ -92,11 +94,72 @@ def _parse_commit_text(commit_text, with_parents_line=True, indented_body=True):
     return commit_data
 
 
+# used by _parse_blame_porcelain() function
+_blame_pattern = re.compile(r'^(?P<sha1>[0-9a-f]{40}) (?P<orig>[0-9]+) (?P<final>[0-9]+)')
+
+
+def _parse_blame_porcelain(blame_text):
+    # https://git-scm.com/docs/git-blame#_the_porcelain_format
+    blame_lines = blame_text.split('\n')
+    if not blame_lines:
+        # TODO: return NamedTuple
+        return {}, []
+
+    curr_commit = None
+    curr_line = {}
+    commits_data = {}
+    line_data = []
+
+    for line in blame_lines:
+        if not line:  # empty line, shouldn't happen
+            continue
+
+        if match := _blame_pattern.match(line):
+            curr_commit = match.group('sha1')
+            curr_line = {
+                'commit': curr_commit,
+                'original': match.group('orig'),
+                'final': match.group('final')
+            }
+        elif line.startswith('\t'):  # TAB
+            # the contents of the actual line
+            curr_line['line'] = line[1:]  # remove leading TAB
+            line_data.append(curr_line)
+        else:
+            # other header
+            if curr_commit not in commits_data:
+                commits_data[curr_commit] = {}
+            try:
+                # e.g. 'author A U Thor'
+                key, value = line.split(' ', maxsplit=1)
+            except ValueError:
+                # e.g. 'boundary'
+                key, value = (line, True)
+            commits_data[curr_commit][key] = value
+
+    return commits_data, line_data
+
+
+def changes_survival_perc(lines_survival):
+    lines_total = 0
+    lines_survived = 0
+    for _, lines_info in lines_survival.items():
+        lines_total += len(lines_info)
+        lines_survived += sum(1 for line_data in lines_info
+                              if 'previous' not in line_data)
+
+    return lines_survived, lines_total
+
+
 class GitRepo:
     """Class representing Git repository, for performing operations on"""
     path_encoding = 'utf8'
     default_file_encoding = 'utf8'
     log_encoding = 'utf8'
+    # see 346245a1bb ("hard-code the empty tree object", 2008-02-13)
+    # https://github.com/git/git/commit/346245a1bb6272dd370ba2f7b9bf86d3df5fed9a
+    # https://github.com/git/git/commit/e1ccd7e2b1cae8d7dab4686cddbd923fb6c46953
+    empty_tree_sha1 = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
     def __init__(self, git_directory):
         # TODO: check that `git_directory` is a path to git repository
@@ -322,6 +385,54 @@ class GitRepo:
 
         return result
 
+    def unidiff(self, commit='HEAD', prev=None):
+        if prev is None:
+            # NOTE: this means first-parent changes for merge commits
+            prev = commit + '^'
+
+        cmd = [
+            'git', '-C', self.repo,
+            'diff', '--find-renames', '--find-copies', '--find-copies-harder',
+            prev, commit
+        ]
+        process = subprocess.run(cmd,
+                                 capture_output=True, check=True,
+                                 encoding=self.default_file_encoding)
+
+        return PatchSet(process.stdout)
+
+    def changed_lines_extents(self, commit='HEAD', prev=None, side=DiffSide.POST):
+        # TODO: implement also for DiffSide.PRE
+        if side != DiffSide.POST:
+            raise NotImplementedError(f"GitRepo.changed_lines: unsupported side={side} parameter")
+
+        patch = self.unidiff(commit=commit, prev=prev)
+        result = {}
+        for patched_file in patch:
+            if patched_file.is_removed_file:  # no post-image for removed files
+                continue
+            line_ranges = []
+            for hunk in patched_file:
+                (range_beg, range_end) = (None, None)
+                for line in hunk:
+                    # we are interested only in ranges of added lines (in post-image)
+                    if line.is_added:
+                        if range_beg is None:  # first added line in line range
+                            range_beg = line.target_line_no
+                        range_end = line.target_line_no
+                    else:  # deleted line, context line, or "No newline at end of file" line
+                        if range_beg is not None:
+                            line_ranges.append((range_beg, range_end))
+                            range_beg = None
+
+                # if diff ends with added line
+                if range_beg is not None:
+                    line_ranges.append((range_beg, range_end))
+
+            result[patched_file.path] = line_ranges
+
+        return result
+
     def _file_contents_process(self, commit, path):
         cmd = [
             'git', '-C', self.repo, 'show',  # or 'git', '-C', self.repo, 'cat-file', 'blob',
@@ -509,5 +620,119 @@ class GitRepo:
         process.wait()  # to avoid ResourceWarning: subprocess NNN is still running
 
         return result
+
+    def to_oid(self, obj):
+        cmd = [
+            'git', '-C', self.repo,
+            'rev-parse', '--verify', '--end-of-options', obj
+        ]
+        try:
+            # emits SHA-1 identifier if object is found in the repo; otherwise, errors out
+            process = subprocess.run(cmd, capture_output=True, check=True)
+        except subprocess.CalledProcessError:
+            return None
+
+        # SHA-1 is ASCII only
+        return process.stdout.decode('latin1').strip()
+
+    def is_valid_commit(self, commit):
+        return self.to_oid(str(commit)+'^{commit}') is not None
+
+    def get_current_branch(self):
+        cmd = [
+            'git', '-C', self.repo,
+            'symbolic-ref', '--quiet', '--short', 'HEAD'
+        ]
+        try:
+            # Using '--quiet' means that the command would not issue an error message
+            # but exit with non-zero status silently if HEAD is not a symbolic ref, but detached HEAD
+            process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        except subprocess.CalledProcessError:
+            return None
+
+        return process.stdout.strip()
+
+    def resolve_symbolic_ref(self, ref='HEAD'):
+        cmd = [
+            'git', '-C', self.repo,
+            'symbolic-ref', '--quiet', str(ref)
+        ]
+        try:
+            # Using '--quiet' means that the command would not issue an error message
+            # but exit with non-zero status silently if `ref` is not a symbolic ref
+            process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        except subprocess.CalledProcessError:
+            return None
+
+        return process.stdout.strip()
+
+    def _to_refs_list(self, ref_pattern='HEAD'):
+        # support single patter or list of patterns
+        # TODO: use variable number of parameters instead (?)
+        if not isinstance(ref_pattern, list):
+            ref_pattern = [ref_pattern]
+
+        return filter(
+            # filter out cases of detached HEAD, resolved to None (no branch)
+            lambda x: x is not None,
+            map(
+                # resolve symbolic references, currently only 'HEAD' is resolved
+                lambda x: x if x != 'HEAD' else self.resolve_symbolic_ref(x),
+                ref_pattern
+            )
+        )
+
+    def is_merged_into(self, commit, ref_pattern='HEAD'):
+        ref_pattern = self._to_refs_list(ref_pattern)
+
+        cmd = [
+            'git', '-C', self.repo,
+            'for-each-ref', f'--contains={commit}',  # only list refs which contain the specified commit
+            '--format=%(refname)',  # we only need list of refs that fulfill the condition mentioned above
+            *ref_pattern
+        ]
+        process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        return process.stdout.splitlines()
+
+    def reverse_blame(self, commit, file, ref_pattern='HEAD', line_extents=None):
+        ref_pattern = self._to_refs_list(ref_pattern)
+
+        line_args = []
+        if line_extents is not None:
+            for beg, end in line_extents:
+                line_args.extend(['-L', f'{beg},{end}'])
+
+        cmd = [
+            'git', '-C', self.repo,
+            'blame', '--reverse', commit, '--porcelain',
+            *line_args,
+            file
+        ]
+        process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        return _parse_blame_porcelain(
+            process.stdout
+        )
+
+    def changes_survival(self, commit, prev=None):
+        lines_survival = {}
+        all_commits_data = {}
+
+        changes_info = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
+        for file_path, line_extents in changes_info.items():
+            if not line_extents:
+                # empty changes, for example pure rename
+                continue
+
+            commits_data, lines_data = self.reverse_blame(commit, file_path,
+                                                          line_extents=line_extents)
+            for line_info in lines_data:
+                if 'previous' in commits_data[line_info['commit']]:
+                    line_info['previous'] = commits_data[line_info['commit']]['previous']
+            lines_survival[file_path] = lines_data
+            # NOTE: 'filename', 'boundary', and details of 'previous'
+            # are different for different files, but common data could be extracted
+            all_commits_data[file_path] = commits_data
+
+        return all_commits_data, lines_survival
 
 # end of file utils/git.py
