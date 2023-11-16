@@ -15,7 +15,7 @@ from src.utils.functools import describe_func_call
 from src.utils.strings import strip_suffixes
 
 # TODO: read from environment variable or configuration file
-GITHUB_API_TOKEN= "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"  # from jnareb
+GITHUB_API_TOKEN = "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"  # from jnareb
 
 
 def is_github(url):
