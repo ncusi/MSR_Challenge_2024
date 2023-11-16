@@ -174,13 +174,23 @@ class GitTestCase(unittest.TestCase):
         )
 
     def test_changed_lines_extents(self):
-        actual = self.repo.changed_lines_extents()
-        expected = {
-            'new_file': [(1,10)],  # whole file added in v2
-            'renamed_file': [],  # file renamed in v2 from 'example_file', no changes
-            'subdir/subfile': [(2,2)],  # file modified in v2 without name change
-        }
-        self.assertEqual(actual, expected, "changed lines for post-image for changed files match")
+        with self.subTest("for HEAD (last commit)"):
+            actual = self.repo.changed_lines_extents()
+            expected = {
+                'new_file': [(1,10)],  # whole file added in v2
+                'renamed_file': [],  # file renamed in v2 from 'example_file', no changes
+                'subdir/subfile': [(2,2)],  # file modified in v2 without name change
+            }
+            self.assertEqual(actual, expected, "changed lines for post-image for changed files match (HEAD)")
+
+        with self.subTest("for v1 (first commit, root)"):
+            actual = self.repo.changed_lines_extents('v1')
+            expected = {
+                'example_file': [(1,5)],  # whole file added in v1 with 5 lines
+                'subdir/subfile': [(1,1)],  # whole file added in v2 with 1 incomplete line
+            }
+            self.assertEqual(actual, expected, "changed lines for post-image for changed files match (v1)")
+
 
     def test_file_contents(self):
         """Test that GitRepo.file_contents returns file contents as text"""
