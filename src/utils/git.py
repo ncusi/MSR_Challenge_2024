@@ -340,6 +340,39 @@ class GitRepo:
 
         return PatchSet(process.stdout)
 
+    def changed_lines_extents(self, commit='HEAD', prev=None, side=DiffSide.POST):
+        # TODO: implement also for DiffSide.PRE
+        if side != DiffSide.POST:
+            raise NotImplementedError(f"GitRepo.changed_lines: unsupported side={side} parameter")
+
+        patch = self.unidiff(commit=commit, prev=prev)
+        result = {}
+        for patched_file in patch:
+            if patched_file.is_removed_file:  # no post-image for removed files
+                continue
+            line_ranges = []
+            for hunk in patched_file:
+                (range_beg, range_end) = (None, None)
+                for line in hunk:
+                    # we are interested only in ranges of added lines (in post-image)
+                    if line.is_added:
+                        if range_beg is None:  # first added line in line range
+                            range_beg = line.target_line_no
+                        range_end = line.target_line_no
+                    else:  # deleted line, context line, or "No newline at end of file" line
+                        if range_beg is not None:
+                            line_ranges.append((range_beg, range_end))
+                            range_beg = None
+
+                # if diff ends with added line
+                if range_beg is not None:
+                    line_ranges.append((range_beg, range_end))
+
+            result[patched_file.path] = line_ranges
+
+        return result
+
+
     def _file_contents_process(self, commit, path):
         cmd = [
             'git', '-C', self.repo, 'show',  # or 'git', '-C', self.repo, 'cat-file', 'blob',
