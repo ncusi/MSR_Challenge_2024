@@ -136,11 +136,16 @@ def _parse_blame_porcelain(blame_text):
 
     return commits_data, line_data
 
+
 class GitRepo:
     """Class representing Git repository, for performing operations on"""
     path_encoding = 'utf8'
     default_file_encoding = 'utf8'
     log_encoding = 'utf8'
+    # see 346245a1bb ("hard-code the empty tree object", 2008-02-13)
+    # https://github.com/git/git/commit/346245a1bb6272dd370ba2f7b9bf86d3df5fed9a
+    # https://github.com/git/git/commit/e1ccd7e2b1cae8d7dab4686cddbd923fb6c46953
+    empty_tree_sha1 = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
     def __init__(self, git_directory):
         # TODO: check that `git_directory` is a path to git repository
