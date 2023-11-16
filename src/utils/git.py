@@ -387,8 +387,12 @@ class GitRepo:
 
     def unidiff(self, commit='HEAD', prev=None):
         if prev is None:
-            # NOTE: this means first-parent changes for merge commits
-            prev = commit + '^'
+            try:
+                # NOTE: this means first-parent changes for merge commits
+                return self.unidiff(commit=commit, prev=commit + '^')
+            except subprocess.CalledProcessError:
+                # commit^ does not exist for a root commits (for first commits)
+                return self.unidiff(commit=commit, prev=self.empty_tree_sha1)
 
         cmd = [
             'git', '-C', self.repo,
