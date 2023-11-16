@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+
 from pathlib import Path
 
 from src.tests import slow_test
@@ -35,7 +36,7 @@ class GitTestCase(unittest.TestCase):
         subprocess.run(['git', '-C', cls.repo_path, 'branch', '-m', cls.default_branch], check=True)
 
         # create files, and initial commit
-        Path(cls.repo_path).joinpath('example_file').write_text('example')
+        Path(cls.repo_path).joinpath('example_file').write_text('example\n2\n3\n4\n5\n')
         Path(cls.repo_path).joinpath('subdir').mkdir()
         Path(cls.repo_path).joinpath('subdir', 'subfile').write_text('subfile')
         subprocess.run(['git', '-C', cls.repo_path, 'add', '.'], check=True)
@@ -183,7 +184,7 @@ class GitTestCase(unittest.TestCase):
 
     def test_file_contents(self):
         """Test that GitRepo.file_contents returns file contents as text"""
-        expected = 'example'
+        expected = 'example\n2\n3\n4\n5\n'
         actual = self.repo.file_contents('v1', 'example_file')
         self.assertEqual(actual, expected, "contents of 'example_file' at v1")
 
@@ -192,7 +193,7 @@ class GitTestCase(unittest.TestCase):
 
     def test_open_file(self):
         """Test that GitRepo.open_file works as a context manager, returning binary file"""
-        expected = b'example'
+        expected = b'example\n2\n3\n4\n5\n'
         with self.repo.open_file('v1', 'example_file') as fpb:
             actual = fpb.read()
 
@@ -233,7 +234,7 @@ class GitTestCase(unittest.TestCase):
     def test_get_commit_metadata(self):
         commit_info = self.repo.get_commit_metadata('v2')
 
-        self.assertEqual(commit_info['tree'], '5347fe7b8606e7a164ab5cd355ee5d86c99796c0',
+        self.assertEqual(commit_info['tree'], '4beabe9df57bd6d0bb43d4f94c98f1106437ff95',
                          "'tree' field did not change")
         self.assertEqual(commit_info['message'], 'Change some files\n\n* one renamed file\n* one new file\n',
                          "commit message matches")
