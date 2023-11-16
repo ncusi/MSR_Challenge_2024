@@ -703,7 +703,9 @@ class GitRepo:
         )
 
     def changes_survival(self, commit, prev=None):
-        result = {}
+        lines_survival = {}
+        all_commits_data = {}
+
         changes_info = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
         for file_path, line_extents in changes_info.items():
             if not line_extents:
@@ -715,8 +717,11 @@ class GitRepo:
             for line_info in lines_data:
                 if 'previous' in commits_data[line_info['commit']]:
                     line_info['previous'] = commits_data[line_info['commit']]['previous']
-            result[file_path] = lines_data
+            lines_survival[file_path] = lines_data
+            # NOTE: 'filename', 'boundary', and details of 'previous'
+            # are different for different files, but common data could be extracted
+            all_commits_data[file_path] = commits_data
 
-        return result
+        return all_commits_data, lines_survival
 
 # end of file utils/git.py
