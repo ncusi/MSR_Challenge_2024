@@ -372,7 +372,6 @@ class GitRepo:
 
         return result
 
-
     def _file_contents_process(self, commit, path):
         cmd = [
             'git', '-C', self.repo, 'show',  # or 'git', '-C', self.repo, 'cat-file', 'blob',
@@ -561,18 +560,22 @@ class GitRepo:
 
         return result
 
-    def is_valid_commit(self, commit):
+    def to_oid(self, obj):
         cmd = [
             'git', '-C', self.repo,
-            'rev-parse', '--verify', '--end-of-options', str(commit)+'^{commit}'
+            'rev-parse', '--verify', '--end-of-options', obj
         ]
         try:
-            # emits SHA-1 identifier if commit is found in the repo; otherwise, errors out
-            subprocess.run(cmd, capture_output=False, check=True)
+            # emits SHA-1 identifier if object is found in the repo; otherwise, errors out
+            process = subprocess.run(cmd, capture_output=True, check=True)
         except subprocess.CalledProcessError:
-            return False
+            return None
 
-        return True
+        # SHA-1 is ASCII only
+        return process.stdout.decode('latin1').strip()
+
+    def is_valid_commit(self, commit):
+        return self.to_oid(str(commit)+'^{commit}') is not None
 
     def get_current_branch(self):
         cmd = [
