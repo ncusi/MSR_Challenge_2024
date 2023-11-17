@@ -21,7 +21,7 @@ import pandas as pd
 import unidiff
 from tqdm import tqdm
 
-from src.utils.files import load_json_with_checks
+from src.data.common import load_repositories_json
 from src.utils.functools import timed
 from src.utils.git import GitRepo, changes_survival_perc
 
@@ -147,18 +147,7 @@ def main():
     print(f"Reading commit sharings data from '{commit_sharings_path}'...",
           file=sys.stderr)
     commits_df = pd.read_csv(commit_sharings_path)
-    repo_clone_info = load_json_with_checks(repositories_info_path,
-                                            file_descr="<repositories.json>",
-                                            data_descr="info about cloned repos",
-                                            err_code=ERROR_ARGS, expected_type=list)
-    repo_clone_data = {
-        repo_info['project']: {
-            key: value
-            for key, value in repo_info.items()
-            if key != 'project'
-        }
-        for repo_info in repo_clone_info
-    }
+    repo_clone_data = load_repositories_json(repositories_info_path)
 
     print(f"Processing {commits_df.shape} commit sharings data...",
           file=sys.stderr)

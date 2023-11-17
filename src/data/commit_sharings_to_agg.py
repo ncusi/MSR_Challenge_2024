@@ -19,8 +19,8 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
+from src.data.common import load_repositories_json
 from src.data.sharings import find_most_recent_sharings_files
-from src.utils.files import load_json_with_checks
 from src.utils.functools import timed
 
 # constants
@@ -98,8 +98,7 @@ def process_commit_sharings(commit_sharings_path, repo_clone_data):
             ]
         }
     })
-    #print(f"{df_repo.index=}")
-    #print(f"keys: {repo_clone_data.keys()}")
+
     df_repo.loc[:, 'is_cloned'] = df_repo.index.map(
         lambda repo: repo.split('/')[-1] in repo_clone_data,
         na_action='ignore'
@@ -143,18 +142,7 @@ def main():
 
     # .......................................................................
     # PROCESSING
-    repo_clone_info = load_json_with_checks(repositories_info_path,
-                                            file_descr="<repositories.json>",
-                                            data_descr="info about cloned repos",
-                                            err_code=ERROR_ARGS, expected_type=list)
-    repo_clone_data = {
-        repo_info['project']: {
-            key: value
-            for key, value in repo_info.items()
-            if key != 'project'
-        }
-        for repo_info in repo_clone_info
-    }
+    repo_clone_data = load_repositories_json(repositories_info_path)
 
     print(f"Finding sharings from DevGPT dataset at '{dataset_directory_path}'...",
           file=sys.stderr)
