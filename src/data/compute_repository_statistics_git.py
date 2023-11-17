@@ -5,7 +5,8 @@
 Retrieves number of commits and authors from repository
 
 Example:
-    python3 src/data/check_repository_statistics.py data/DevGPT/snapshot_20230831/20230831_063412_commit_sharings.json \\
+    python3 src/data/compute_repository_statistics_git.py \\
+        data/DevGPT/snapshot_20230831/20230831_063412_commit_sharings.json \\
         data/repositories data/repository_statistics.json
 """
 import json
