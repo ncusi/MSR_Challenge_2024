@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Usage: {script_name} <commit_file_path> <repositories_path> <output.json>
 
-Checks if commits present in file are in main or master branch of repository
+Retrieves number of commits and authors from repository
 
 Example:
     python3 src/data/check_repository_statistics.py data/DevGPT/snapshot_20230831/20230831_063412_commit_sharings.json \\

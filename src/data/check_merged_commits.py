@@ -5,7 +5,7 @@
 Checks if commits present in file are in main or master branch of repository
 
 Example:
-    python3 src/data/download_repositories.py data/DevGPT/snapshot_20230831/20230831_063412_commit_sharings.json \\
+    python3 src/data/check_merged_commits.py data/DevGPT/snapshot_20230831/20230831_063412_commit_sharings.json \\
         data/repositories data/commit_status.json
 """
 import json
