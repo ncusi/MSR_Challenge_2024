@@ -20,7 +20,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.data.common import load_repositories_json
-from src.data.sharings import find_most_recent_sharings_files
+from src.data.sharings import find_most_recent_commit_sharings
 from src.utils.functools import timed
 
 # constants
@@ -146,7 +146,7 @@ def main():
 
     print(f"Finding sharings from DevGPT dataset at '{dataset_directory_path}'...",
           file=sys.stderr)
-    commit_sharings_path = find_most_recent_sharings_files(dataset_directory_path)['commit']
+    commit_sharings_path = find_most_recent_commit_sharings(dataset_directory_path)
     print(f"Sharings for commit at '{commit_sharings_path}'", file=sys.stderr)
 
     commit_df, repo_df = process_commit_sharings(commit_sharings_path, repo_clone_data)

@@ -69,3 +69,15 @@ def find_most_recent_sharings_files(dataset_path, verbose=True):
         print(f"Found sharings for {sorted(sharings_files.keys())}", file=sys.stderr)
 
     return sharings_files
+
+
+def find_most_recent_commit_sharings(dataset_directory_path, verbose=True):
+    """Find commit sharings from most recent snapshot in DevGPT dataset
+
+    :param Path dataset_directory_path: path to directory with DevGPT dataset
+    :param bool verbose: whether to print debugging-like information,
+        `true` by default
+    :return: path to most recent commits sharings file
+    :rtype: Path
+    """
+    return find_most_recent_sharings_files(dataset_directory_path, verbose)['commit']
