@@ -36,6 +36,13 @@ class DiffSide(Enum):
     B = 'post'
 
 
+class StartLogFrom(Enum):
+    """Enum to be used for special cases for starting point of 'git log'"""
+    CURRENT = 'HEAD'
+    HEAD = 'HEAD'  # alias
+    ALL = '--all'
+
+
 def _parse_authorship_info(authorship_line, field_name='author'):
     # trick from https://stackoverflow.com/a/279597/
     if not hasattr(_parse_authorship_info, 'regexp'):
@@ -759,5 +766,39 @@ class GitRepo:
             all_commits_data[file_path] = commits_data
 
         return all_commits_data, lines_survival
+
+    def count_commits(self, start_from=StartLogFrom.CURRENT, until_commit=None,
+                      first_parent=False):
+        """Count number of commits in the repository
+
+        Starting from `start_from`, count number of commits, stopping
+        at `until_commit` if provided.
+
+        If `first_parent` is set to True, makes Git follow only the first
+        parent commit upon seeing a merge commit.
+
+        :param start_from: where to start from to follow 'parent' links
+        :type start_from: str or StartLogFrom
+        :param until_commit: where to stop following 'parent' links;
+            also ensures that we follow ancestry path to it, optional
+        :type until_commit: str or None
+        :param bool first_parent: follow only the first parent commit
+            upon seeing a merge commit
+        :return: number of commits
+        :rtype: int
+        """
+        if hasattr(start_from, 'value'):
+            start_from = start_from.value
+        cmd = [
+            'git', '-C', self.repo,
+            'rev-list', '--count', str(start_from),
+        ]
+        if until_commit is not None:
+            cmd.extend(['--not', until_commit, f'--ancestry-path={until_commit}', '--boundary'])
+        if first_parent:
+            cmd.append('--first-parent')
+        process = subprocess.run(cmd, capture_output=True, check=True, encoding='utf8')
+
+        return int(process.stdout)
 
 # end of file utils/git.py

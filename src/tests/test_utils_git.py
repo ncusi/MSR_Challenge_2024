@@ -370,6 +370,17 @@ class GitTestCase(unittest.TestCase):
             # all 5 lines survived from 'example_file', 1 line in 'subdir/subfile' did not
             self.assertEqual(changes_survival_perc(survival_info), (5, 5+1))
 
+    def test_count_commits(self):
+        """Basic tests for GitRepo.count_commits() method"""
+        expected = 3  # v1, v1.5, v2
+        with self.subTest("default value of start_from"):
+            actual = self.repo.count_commits()
+            self.assertEqual(actual, expected, "number of commits in repository matches")
+
+        with self.subTest("for start_from='HEAD'"):
+            actual = self.repo.count_commits('HEAD')
+            self.assertEqual(actual, expected, "number of commits in repository matches")
+
 
 class GitClassMethodsTestCase(unittest.TestCase):
     def test_clone_repository(self):
