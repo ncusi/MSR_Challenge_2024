@@ -63,7 +63,8 @@ def _parse_authorship_info(authorship_line, field_name='author'):
 
 def _parse_commit_text(commit_text, with_parents_line=True, indented_body=True):
     # based on `parse_commit_text` from gitweb/gitweb.perl in git project
-    commit_lines = commit_text.split('\n')[:-1]  # remove trailing '\0'
+    # NOTE: cannot use .splitlines() here
+    commit_lines = commit_text.split('\n')[:-1]  # remove trailing '\n'
 
     if not commit_lines:
         return None
@@ -107,7 +108,7 @@ _blame_pattern = re.compile(r'^(?P<sha1>[0-9a-f]{40}) (?P<orig>[0-9]+) (?P<final
 
 def _parse_blame_porcelain(blame_text):
     # https://git-scm.com/docs/git-blame#_the_porcelain_format
-    blame_lines = blame_text.split('\n')
+    blame_lines = blame_text.splitlines()
     if not blame_lines:
         # TODO: return NamedTuple
         return {}, []
