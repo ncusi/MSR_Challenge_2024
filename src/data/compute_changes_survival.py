@@ -82,6 +82,10 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
             n_unmerged += 1
             continue
 
+        # at this point we know that HEAD contains gpt_commit
+        commits_from_HEAD = repo.count_commits(until_commit=gpt_commit)
+        augment_curr['number_of_commits_from_HEAD'] = commits_from_HEAD
+
         try:
             _, survival_info = repo.changes_survival(gpt_commit)
             augment_curr['error'] = False
