@@ -13,6 +13,8 @@ import json
 import sys
 from pathlib import Path
 
+from tqdm import tqdm
+
 from src.utils.functools import timed
 from src.utils.git import GitRepo
 
@@ -29,16 +31,25 @@ def load_sharings(sharings_path):
 def check_repository_statistic(sharings, repositories_path):
     sharings_list = sharings['Sources']
     results = {}
-    for sharing in sharings_list:
+    for sharing in tqdm(sharings_list, desc='sharing'):
         repo_name = sharing['RepoName']
         repository_directory_name = repo_name.split('/')[1]
         repository_path = repositories_path / repository_directory_name
         if repo_name not in results:
             repo = GitRepo(repository_path)
+
             commit_number = repo.count_commits()
+            commit_number_first_parent = repo.count_commits(first_parent=True)
             author_number = len(repo.list_authors_shortlog())
-            results[repo_name] = {'author_number': author_number,
-                                  'commit_number': commit_number}
+            files_number = len(repo.list_files())
+
+            results[repo_name] = {
+                'author_number': author_number,
+                'commit_number': commit_number,
+                'commit_number_first_parent': commit_number_first_parent,
+                'files_number': files_number,
+            }
+
     return results
 
 
