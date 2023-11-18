@@ -63,7 +63,8 @@ def _parse_authorship_info(authorship_line, field_name='author'):
 
 def _parse_commit_text(commit_text, with_parents_line=True, indented_body=True):
     # based on `parse_commit_text` from gitweb/gitweb.perl in git project
-    commit_lines = commit_text.split('\n')[:-1]  # remove trailing '\0'
+    # NOTE: cannot use .splitlines() here
+    commit_lines = commit_text.split('\n')[:-1]  # remove trailing '\n'
 
     if not commit_lines:
         return None
@@ -107,7 +108,7 @@ _blame_pattern = re.compile(r'^(?P<sha1>[0-9a-f]{40}) (?P<orig>[0-9]+) (?P<final
 
 def _parse_blame_porcelain(blame_text):
     # https://git-scm.com/docs/git-blame#_the_porcelain_format
-    blame_lines = blame_text.split('\n')
+    blame_lines = blame_text.splitlines()
     if not blame_lines:
         # TODO: return NamedTuple
         return {}, []
@@ -827,5 +828,27 @@ class GitRepo:
         ]
         process = subprocess.run(cmd, capture_output=True, check=True, encoding='utf8')
         return process.stdout.splitlines()
+
+    def find_roots(self, start_from=StartLogFrom.CURRENT):
+        """Find root commits (commits without parents), starting from `start_from`
+
+        :param start_from: where to start from to follow 'parent' links
+        :type start_from: str or StartLogFrom
+        :return: list of root commits, as SHA-1
+        :rtype: list[str]
+        """
+        if hasattr(start_from, 'value'):
+            start_from = start_from.value
+        elif start_from is None:
+            start_from = 'HEAD'
+
+        cmd = [
+            'git', '-C', self.repo,
+            'rev-list', '--max-parents=0',  # gives all root commits
+            str(start_from),
+        ]
+        process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        return process.stdout.splitlines()
+
 
 # end of file utils/git.py

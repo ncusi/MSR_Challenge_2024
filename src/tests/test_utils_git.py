@@ -393,6 +393,14 @@ class GitTestCase(unittest.TestCase):
         ]
         self.assertCountEqual(actual_simplified, expected, "list of authors matches")
 
+    def test_find_roots(self):
+        """Test GitRepo.find_roots() method"""
+        roots_list = self.repo.find_roots()
+        self.assertEqual(len(roots_list), 1, "has a single root commit")
+
+        v1_oid = self.repo.to_oid("v1")
+        self.assertEqual(roots_list[0], v1_oid, "root commit is v1")
+
 
 class GitClassMethodsTestCase(unittest.TestCase):
     def test_clone_repository(self):
