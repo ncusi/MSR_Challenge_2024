@@ -686,7 +686,28 @@ class GitRepo:
             )
         )
 
-    def is_merged_into(self, commit, ref_pattern='HEAD'):
+    def check_merged_into(self, commit, ref_pattern='HEAD'):
+        """List those refs among `ref_pattern` that contain given `commit`
+
+        This method can be used to check if a given `commit` is merged into
+        at least one ref matching `ref_pattern` using 'git for-each-ref --contains',
+        see https://git-scm.com/docs/git-for-each-ref
+
+        Return list of refs that contain given commit, or in other words
+        list of refs that given commit is merged into.
+
+        Note that symbolic refs, such as 'HEAD', are expanded.
+
+        :param str commit: The commit to check if it is merged
+        :param ref_pattern: <pattern>…, that is a pattern or list of patterns;
+            check each ref that match against at least one patterns, either using
+            fnmatch(3) or literally, in the latter case matching completely,
+            or from the beginning up to a slash.  Defaults to 'HEAD'.
+        :type ref_pattern: str or list[str]
+        :return: list of refs matching `ref_pattern` that `commit` is merged into
+            (that contain given `commit`)
+        :rtype: list[str]
+        """
         ref_pattern = self._to_refs_list(ref_pattern)
 
         cmd = [

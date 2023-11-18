@@ -298,11 +298,11 @@ class GitTestCase(unittest.TestCase):
             "'v2' is not a symbolic ref"
         )
 
-    def test_is_merged_into(self):
-        """Test GitRepo.is_merged_into for various combinations of commit and into"""
-        actual = self.repo.is_merged_into('v1')
+    def test_check_merged_into(self):
+        """Test GitRepo.check_merged_into for various combinations of commit and into"""
+        actual = self.repo.check_merged_into('v1')
         self.assertGreater(len(actual), 0, "'v1' is merged [into HEAD]")
-        actual = self.repo.is_merged_into('v1', ['refs/heads/', 'refs/tags/'])
+        actual = self.repo.check_merged_into('v1', ['refs/heads/', 'refs/tags/'])
         expected = [
             f'refs/heads/{self.default_branch}',
             'refs/tags/v1',
@@ -310,7 +310,7 @@ class GitTestCase(unittest.TestCase):
             'refs/tags/v2',
         ]
         self.assertCountEqual(actual, expected, "'v1' is merged into HEAD, v1, v1.5, v2")
-        actual = self.repo.is_merged_into('v2', 'refs/tags/v1')
+        actual = self.repo.check_merged_into('v2', 'refs/tags/v1')
         self.assertFalse(actual, "'v2' is not merged into v1")
 
     def test_reverse_blame(self):

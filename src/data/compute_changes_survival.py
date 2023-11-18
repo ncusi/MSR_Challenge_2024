@@ -75,7 +75,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
             'committer_timestamp': commit_metadata['committer']['timestamp'],
         }
 
-        is_merged = repo.is_merged_into(gpt_commit, 'HEAD')
+        is_merged = repo.check_merged_into(gpt_commit, 'HEAD')
         augment_curr['is_merged_HEAD'] = bool(is_merged)
         if not is_merged:
             n_unmerged += 1
