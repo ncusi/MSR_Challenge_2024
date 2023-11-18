@@ -10,11 +10,11 @@ Example:
         data/repositories data/repository_statistics.json
 """
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 from src.utils.functools import timed
+from src.utils.git import GitRepo
 
 # constants
 ERROR_ARGS = 1
@@ -34,29 +34,12 @@ def check_repository_statistic(sharings, repositories_path):
         repository_directory_name = repo_name.split('/')[1]
         repository_path = repositories_path / repository_directory_name
         if repo_name not in results:
-            commit_number = int(check_commit_number(repository_path))
-            author_number = len(check_authors(repository_path))
+            repo = GitRepo(repository_path)
+            commit_number = repo.count_commits()
+            author_number = len(repo.list_authors_shortlog())
             results[repo_name] = {'author_number': author_number,
                                   'commit_number': commit_number}
     return results
-
-
-def check_commit_number(repository_path):
-    cmd = [
-        'git', '-C', str(repository_path),
-        'rev-list', '--count', 'HEAD'
-    ]
-    process = subprocess.run(cmd, capture_output=True, check=True)
-    return process.stdout.decode('utf8')
-
-
-def check_authors(repository_path):
-    cmd = [
-        'git', '-C', str(repository_path),
-        'shortlog', '-s', '-n', '--all'
-    ]
-    process = subprocess.run(cmd, capture_output=True, check=True)
-    return process.stdout.decode('utf8')
 
 
 @timed

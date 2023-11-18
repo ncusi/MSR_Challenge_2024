@@ -298,11 +298,11 @@ class GitTestCase(unittest.TestCase):
             "'v2' is not a symbolic ref"
         )
 
-    def test_is_merged_into(self):
-        """Test GitRepo.is_merged_into for various combinations of commit and into"""
-        actual = self.repo.is_merged_into('v1')
+    def test_check_merged_into(self):
+        """Test GitRepo.check_merged_into for various combinations of commit and into"""
+        actual = self.repo.check_merged_into('v1')
         self.assertGreater(len(actual), 0, "'v1' is merged [into HEAD]")
-        actual = self.repo.is_merged_into('v1', ['refs/heads/', 'refs/tags/'])
+        actual = self.repo.check_merged_into('v1', ['refs/heads/', 'refs/tags/'])
         expected = [
             f'refs/heads/{self.default_branch}',
             'refs/tags/v1',
@@ -310,7 +310,7 @@ class GitTestCase(unittest.TestCase):
             'refs/tags/v2',
         ]
         self.assertCountEqual(actual, expected, "'v1' is merged into HEAD, v1, v1.5, v2")
-        actual = self.repo.is_merged_into('v2', 'refs/tags/v1')
+        actual = self.repo.check_merged_into('v2', 'refs/tags/v1')
         self.assertFalse(actual, "'v2' is not merged into v1")
 
     def test_reverse_blame(self):
@@ -369,6 +369,29 @@ class GitTestCase(unittest.TestCase):
             self.assertIn('previous', survival_info['subdir/subfile'][0])
             # all 5 lines survived from 'example_file', 1 line in 'subdir/subfile' did not
             self.assertEqual(changes_survival_perc(survival_info), (5, 5+1))
+
+    def test_count_commits(self):
+        """Basic tests for GitRepo.count_commits() method"""
+        expected = 3  # v1, v1.5, v2
+        with self.subTest("default value of start_from"):
+            actual = self.repo.count_commits()
+            self.assertEqual(actual, expected, "number of commits in repository matches")
+
+        with self.subTest("for start_from='HEAD'"):
+            actual = self.repo.count_commits('HEAD')
+            self.assertEqual(actual, expected, "number of commits in repository matches")
+
+    def test_list_authors(self):
+        """Test GitRepo.list_authors_shortlog() and related methods"""
+        expected = [
+            '2\tA U Thor',  # author of v1, v1.5
+            '1\tJoe Random',  # author of v2
+        ]
+        actual_simplified = [
+            info.strip()
+            for info in self.repo.list_authors_shortlog()
+        ]
+        self.assertCountEqual(actual_simplified, expected, "list of authors matches")
 
 
 class GitClassMethodsTestCase(unittest.TestCase):

@@ -36,6 +36,13 @@ class DiffSide(Enum):
     B = 'post'
 
 
+class StartLogFrom(Enum):
+    """Enum to be used for special cases for starting point of 'git log'"""
+    CURRENT = 'HEAD'
+    HEAD = 'HEAD'  # alias
+    ALL = '--all'
+
+
 def _parse_authorship_info(authorship_line, field_name='author'):
     # trick from https://stackoverflow.com/a/279597/
     if not hasattr(_parse_authorship_info, 'regexp'):
@@ -686,7 +693,28 @@ class GitRepo:
             )
         )
 
-    def is_merged_into(self, commit, ref_pattern='HEAD'):
+    def check_merged_into(self, commit, ref_pattern='HEAD'):
+        """List those refs among `ref_pattern` that contain given `commit`
+
+        This method can be used to check if a given `commit` is merged into
+        at least one ref matching `ref_pattern` using 'git for-each-ref --contains',
+        see https://git-scm.com/docs/git-for-each-ref
+
+        Return list of refs that contain given commit, or in other words
+        list of refs that given commit is merged into.
+
+        Note that symbolic refs, such as 'HEAD', are expanded.
+
+        :param str commit: The commit to check if it is merged
+        :param ref_pattern: <pattern>…, that is a pattern or list of patterns;
+            check each ref that match against at least one patterns, either using
+            fnmatch(3) or literally, in the latter case matching completely,
+            or from the beginning up to a slash.  Defaults to 'HEAD'.
+        :type ref_pattern: str or list[str]
+        :return: list of refs matching `ref_pattern` that `commit` is merged into
+            (that contain given `commit`)
+        :rtype: list[str]
+        """
         ref_pattern = self._to_refs_list(ref_pattern)
 
         cmd = [
@@ -738,5 +766,66 @@ class GitRepo:
             all_commits_data[file_path] = commits_data
 
         return all_commits_data, lines_survival
+
+    def count_commits(self, start_from=StartLogFrom.CURRENT, until_commit=None,
+                      first_parent=False):
+        """Count number of commits in the repository
+
+        Starting from `start_from`, count number of commits, stopping
+        at `until_commit` if provided.
+
+        If `first_parent` is set to True, makes Git follow only the first
+        parent commit upon seeing a merge commit.
+
+        :param start_from: where to start from to follow 'parent' links
+        :type start_from: str or StartLogFrom
+        :param until_commit: where to stop following 'parent' links;
+            also ensures that we follow ancestry path to it, optional
+        :type until_commit: str or None
+        :param bool first_parent: follow only the first parent commit
+            upon seeing a merge commit
+        :return: number of commits
+        :rtype: int
+        """
+        if hasattr(start_from, 'value'):
+            start_from = start_from.value
+        cmd = [
+            'git', '-C', self.repo,
+            'rev-list', '--count', str(start_from),
+        ]
+        if until_commit is not None:
+            cmd.extend(['--not', until_commit, f'--ancestry-path={until_commit}', '--boundary'])
+        if first_parent:
+            cmd.append('--first-parent')
+        process = subprocess.run(cmd, capture_output=True, check=True, encoding='utf8')
+
+        return int(process.stdout)
+
+    def list_authors_shortlog(self, start_from=StartLogFrom.ALL):
+        """List all authors using git-shorlog
+
+        Summarizes the history of the project by providing list of authors
+        together with their commit counts.  Uses `git shortlog --summary`
+        internally.
+
+        :param start_from: where to start from to follow 'parent' links
+        :type start_from: str or StartLogFrom
+        :return: list of authors together with their commit count,
+            in the 'SPACE* <count> TAB <author>' format
+        :rtype: list[str]
+        """
+        if hasattr(start_from, 'value'):
+            start_from = start_from.value
+        elif start_from is None:
+            start_from = '--all'
+        cmd = [
+            'git', '-C', self.repo,
+            'shortlog',
+            '--summary',  # Suppress commit description and provide a commit count summary only.
+            '-n',  # Sort output according to the number of commits per author
+            start_from,
+        ]
+        process = subprocess.run(cmd, capture_output=True, check=True, encoding='utf8')
+        return process.stdout.splitlines()
 
 # end of file utils/git.py
