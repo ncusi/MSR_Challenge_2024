@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 """Usage: {script_name} <dataset_path> <repositories_path> <output.json>
 
-Saves all git repositories to specific directory, skips already present ones
+Saves all git repositories to specific directory, skips already present ones.
+Creates <output.json> with information about cloned repositories, which can
+be used in those later stage of pipeline that need access to Git repos.
 
 Example:
     python3 src/data/download_repositories.py data/DevGPT/ \\
@@ -46,6 +48,7 @@ def download_repository(repository, repositories_path, verbose=True):
 
         return {
             'project': repository_name,
+            'repository': repository,
             'repository_url': repository_url,
             'repository_path': str(repository_dir)
         }
@@ -56,6 +59,7 @@ def download_repository(repository, repositories_path, verbose=True):
         repo = GitRepo.clone_repository(repository_url, repository_dir)
         return {
             'project': repository_name,
+            'repository': repository,
             'repository_url': repository_url,
             'repository_path': str(repo)
         }
