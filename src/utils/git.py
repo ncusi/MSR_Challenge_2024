@@ -801,4 +801,31 @@ class GitRepo:
 
         return int(process.stdout)
 
+    def list_authors_shortlog(self, start_from=StartLogFrom.ALL):
+        """List all authors using git-shorlog
+
+        Summarizes the history of the project by providing list of authors
+        together with their commit counts.  Uses `git shortlog --summary`
+        internally.
+
+        :param start_from: where to start from to follow 'parent' links
+        :type start_from: str or StartLogFrom
+        :return: list of authors together with their commit count,
+            in the 'SPACE* <count> TAB <author>' format
+        :rtype: list[str]
+        """
+        if hasattr(start_from, 'value'):
+            start_from = start_from.value
+        elif start_from is None:
+            start_from = '--all'
+        cmd = [
+            'git', '-C', self.repo,
+            'shortlog',
+            '--summary',  # Suppress commit description and provide a commit count summary only.
+            '-n',  # Sort output according to the number of commits per author
+            start_from,
+        ]
+        process = subprocess.run(cmd, capture_output=True, check=True, encoding='utf8')
+        return process.stdout.splitlines()
+
 # end of file utils/git.py

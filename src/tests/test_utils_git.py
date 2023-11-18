@@ -381,6 +381,18 @@ class GitTestCase(unittest.TestCase):
             actual = self.repo.count_commits('HEAD')
             self.assertEqual(actual, expected, "number of commits in repository matches")
 
+    def test_list_authors(self):
+        """Test GitRepo.list_authors_shortlog() and related methods"""
+        expected = [
+            '2\tA U Thor',  # author of v1, v1.5
+            '1\tJoe Random',  # author of v2
+        ]
+        actual_simplified = [
+            info.strip()
+            for info in self.repo.list_authors_shortlog()
+        ]
+        self.assertCountEqual(actual_simplified, expected, "list of authors matches")
+
 
 class GitClassMethodsTestCase(unittest.TestCase):
     def test_clone_repository(self):
