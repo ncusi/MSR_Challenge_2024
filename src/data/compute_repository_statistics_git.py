@@ -42,12 +42,21 @@ def check_repository_statistic(sharings, repositories_path):
             commit_number_first_parent = repo.count_commits(first_parent=True)
             author_number = len(repo.list_authors_shortlog())
             files_number = len(repo.list_files())
+            root_commits = repo.find_roots()
+            HEAD_commit_timestamp = repo.get_commit_metadata('HEAD')['committer']['timestamp']
+            root_commit_timestamp = min([
+                repo.get_commit_metadata(commit)['committer']['timestamp']
+                for commit in root_commits
+            ])
 
             results[repo_name] = {
                 'author_number': author_number,
                 'commit_number': commit_number,
                 'commit_number_first_parent': commit_number_first_parent,
                 'files_number': files_number,
+                'root_commit_number': len(root_commits),
+                'HEAD_commit_timestamp': HEAD_commit_timestamp,
+                'root_commit_timestamp': root_commit_timestamp,
             }
 
     return results
