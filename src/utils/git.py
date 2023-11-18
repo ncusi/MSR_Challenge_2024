@@ -828,4 +828,26 @@ class GitRepo:
         process = subprocess.run(cmd, capture_output=True, check=True, encoding='utf8')
         return process.stdout.splitlines()
 
+    def find_roots(self, start_from=StartLogFrom.CURRENT):
+        """Find root commits (commits without parents), starting from `start_from`
+
+        :param start_from: where to start from to follow 'parent' links
+        :type start_from: str or StartLogFrom
+        :return: list of root commits, as SHA-1
+        :rtype: list[str]
+        """
+        if hasattr(start_from, 'value'):
+            start_from = start_from.value
+        elif start_from is None:
+            start_from = 'HEAD'
+
+        cmd = [
+            'git', '-C', self.repo,
+            'rev-list', '--max-parents=0',  # gives all root commits
+            str(start_from),
+        ]
+        process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        return process.stdout.splitlines()
+
+
 # end of file utils/git.py
