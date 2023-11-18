@@ -78,22 +78,27 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
         is_merged = repo.check_merged_into(gpt_commit, 'HEAD')
         augment_curr['is_merged_HEAD'] = bool(is_merged)
         if not is_merged:
+            augment_data.append(augment_curr)
             n_unmerged += 1
             continue
 
         try:
             _, survival_info = repo.changes_survival(gpt_commit)
             augment_curr['error'] = False
+
         except subprocess.CalledProcessError as err:
             tqdm.write(f"{err=}")
             augment_curr['error'] = True
+            augment_data.append(augment_curr)
             n_errors += 1
             continue
+
         except unidiff.UnidiffParseError as err:
             tqdm.write(f"Project '{project_name}', commit {gpt_commit}\n"
                        f"  at '{repo!s}'")
             tqdm.write(f"{err=}")
             augment_curr['error'] = True
+            augment_data.append(augment_curr)
             n_errors += 1
             continue
 
