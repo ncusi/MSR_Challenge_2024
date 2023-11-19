@@ -1,0 +1,15 @@
+vars:
+  # DevGPT dataset: https://github.com/NAIST-SE/DevGPT
+  - DevGPT:
+      version: 'v9'
+      zenodo_id: 10086809
+stages:
+  download_DevGPT:
+    desc: 'Download DevGPT dataset ${DevGPT.version} from Zenodo'
+    cmd:
+      - dvc get-url --force https://zenodo.org/records/${DevGPT.zenodo_id}/files/DevGPT.zip?download=1
+      - mkdir -p data/external
+      - unzip DevGPT.zip -d data/external/DevGPT
+      - rm DevGPT.zip
+    outs:
+      - data/external/DevGPT/
