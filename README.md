@@ -68,7 +68,7 @@ To avoid recomputing results, which takes time, you can configure
 local [dvc remote storage][dvc-remote-storage], for example:
 
 ```cli
-$ cat <<EOF >.dvc/config.local
+cat <<EOF >>.dvc/config.local
 [core]
     remote = local
 ['remote "local"']
