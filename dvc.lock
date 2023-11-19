@@ -56,3 +56,24 @@ stages:
       hash: md5
       md5: fb48677300a61d2877503ec897f0c4e5
       size: 4994
+  commit_survival:
+    cmd: python scripts/data/compute_changes_survival.py data/interim/commit_sharings_df.csv
+      data/repositories_download_status.json data/interim/commit_sharings_changes_survival_df.csv
+    deps:
+    - path: data/interim/commit_sharings_df.csv
+      hash: md5
+      md5: d6095d145d527872f2f3a4cb48102014
+      size: 483444
+    - path: data/repositories_download_status.json
+      hash: md5
+      md5: 6fef69f970bdae97701e7507f3fd0773
+      size: 163865
+    - path: scripts/data/compute_changes_survival.py
+      hash: md5
+      md5: fbd035cb376e1d085a1bd7d2a54d1944
+      size: 6275
+    outs:
+    - path: data/interim/commit_sharings_changes_survival_df.csv
+      hash: md5
+      md5: 1eaf20e1c7474f77267cedab9ecd9840
+      size: 518372
