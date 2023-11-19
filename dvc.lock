@@ -1,0 +1,14 @@
+schema: '2.0'
+stages:
+  download_DevGPT:
+    cmd:
+    - dvc get-url https://zenodo.org/records/10086809/files/DevGPT.zip?download=1
+    - mkdir -p data/external
+    - unzip DevGPT.zip -d data/external/DevGPT
+    - rm DevGPT.zip
+    outs:
+    - path: data/external/DevGPT/
+      hash: md5
+      md5: 223e6501a84a339b341bfb843595d1b2.dir
+      size: 4182300528
+      nfiles: 65
