@@ -7,7 +7,7 @@ in the <dataset_path>, aggregating data about ChatGPT conversations.
 Aggregate information about projects (group by project).
 
 Example:
-    python src/data/commit_sharings_to_agg.py \\
+    python scripts/data/commit_sharings_to_agg.py \\
         data/external/DevGPT/ data/repositories_download_status.json \\
         data/interim/
 """

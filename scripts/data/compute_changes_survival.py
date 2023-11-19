@@ -9,7 +9,7 @@ reverse blame.
 While at it, add some commit metadata to the dataframe.
 
 Example:
-    python src/data/compute_changes_survival.py \\
+    python scripts/data/compute_changes_survival.py \\
         data/interim/commit_sharings_df.csv data/repositories_download_status.json \\
         data/interim/commit_sharings_changes_survival_df.csv
 """

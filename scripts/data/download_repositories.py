@@ -7,7 +7,7 @@ Creates <output.json> with information about cloned repositories, which can
 be used in those later stage of pipeline that need access to Git repos.
 
 Example:
-    python3 src/data/download_repositories.py data/DevGPT/ \\
+    python scripts/data/download_repositories.py data/DevGPT/ \\
         data/repositories data/repositories_download_status.json
 """
 import json
