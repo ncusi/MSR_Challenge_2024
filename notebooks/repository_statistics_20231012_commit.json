@@ -1,0 +1,306 @@
+{
+  "grnpin/textbox": {
+    "author_number": 3,
+    "commit_number": 84
+  },
+  "bh679/MindfulAI2.0": {
+    "author_number": 1,
+    "commit_number": 87
+  },
+  "4lejandrito/fetchbook": {
+    "author_number": 1,
+    "commit_number": 83
+  },
+  "changchiyou/Github-Action-Test": {
+    "author_number": 1,
+    "commit_number": 114
+  },
+  "waylon620/GPT-tutor": {
+    "author_number": 7,
+    "commit_number": 85
+  },
+  "X3msnake/revoscan-frame-player": {
+    "author_number": 1,
+    "commit_number": 43
+  },
+  "Hajaradnan/Hajaradnan": {
+    "author_number": 1,
+    "commit_number": 1
+  },
+  "unknowntpo/playground-2022": {
+    "author_number": 4,
+    "commit_number": 622
+  },
+  "simonw/code-interpreter-data": {
+    "author_number": 1,
+    "commit_number": 4
+  },
+  "multi-imcookie/cookies": {
+    "author_number": 10,
+    "commit_number": 395
+  },
+  "pbrudny/jobsforit-de": {
+    "author_number": 1,
+    "commit_number": 23
+  },
+  "eshreyareddy/prompting-zomato-reviews": {
+    "author_number": 1,
+    "commit_number": 4
+  },
+  "mgalgs/conf-files": {
+    "author_number": 1,
+    "commit_number": 171
+  },
+  "fabricesemti80/work.ansible-prometheus-stack": {
+    "author_number": 2,
+    "commit_number": 21
+  },
+  "MarekLew/niemario": {
+    "author_number": 1,
+    "commit_number": 11
+  },
+  "jordanbell2357/resume": {
+    "author_number": 1,
+    "commit_number": 71
+  },
+  "KaiMaffucciURI/ProfileApp": {
+    "author_number": 1,
+    "commit_number": 2
+  },
+  "p3ob7o/Speak": {
+    "author_number": 1,
+    "commit_number": 43
+  },
+  "dantebarbieri/pi-picture-frame": {
+    "author_number": 2,
+    "commit_number": 18
+  },
+  "bulatkhu/programmierung-und-programmiersprachen": {
+    "author_number": 1,
+    "commit_number": 71
+  },
+  "tisztamo/vueyourcv": {
+    "author_number": 1,
+    "commit_number": 2
+  },
+  "CPSC-1520/CPSC-1520-Workbook-A02-dgilleland": {
+    "author_number": 2,
+    "commit_number": 155
+  },
+  "OKinane/spotify-to-youtube-chrome-extension": {
+    "author_number": 1,
+    "commit_number": 14
+  },
+  "PyBites-Open-Source/italki-class-assistant": {
+    "author_number": 2,
+    "commit_number": 29
+  },
+  "damus-io/nostrdb": {
+    "author_number": 3,
+    "commit_number": 186
+  },
+  "Hack23/cia": {
+    "author_number": 26,
+    "commit_number": 13888
+  },
+  "kevinveenbirkenbach/computer-playbook": {
+    "author_number": 2,
+    "commit_number": 416
+  },
+  "mgalgs/github-pr-fetch": {
+    "author_number": 1,
+    "commit_number": 19
+  },
+  "SupraSensum/TOP-project-etch-a-sketch": {
+    "author_number": 1,
+    "commit_number": 53
+  },
+  "knowledgesystems/knowledgesystems-k8s-deployment": {
+    "author_number": 34,
+    "commit_number": 1751
+  },
+  "The-Poolz/EthSmartContractIO": {
+    "author_number": 3,
+    "commit_number": 207
+  },
+  "tisztamo/Junior": {
+    "author_number": 6,
+    "commit_number": 838
+  },
+  "VoxturTijmen/Experimental": {
+    "author_number": 3,
+    "commit_number": 23
+  },
+  "scottatron/scottatron.com": {
+    "author_number": 1,
+    "commit_number": 60
+  },
+  "davbaster/python": {
+    "author_number": 3,
+    "commit_number": 12
+  },
+  "larrywright/larrywright.me": {
+    "author_number": 1,
+    "commit_number": 214
+  },
+  "REReal8/CCWorldPlatform": {
+    "author_number": 2,
+    "commit_number": 2719
+  },
+  "saimonmoore/jira-tools": {
+    "author_number": 1,
+    "commit_number": 7
+  },
+  "kevinveenbirkenbach/cli-gnome-extension-manager": {
+    "author_number": 1,
+    "commit_number": 6
+  },
+  "aifenxiang19/AIChat": {
+    "author_number": 1,
+    "commit_number": 2
+  },
+  "veevyo/coding-exercises": {
+    "author_number": 1,
+    "commit_number": 4
+  },
+  "poki/netlib": {
+    "author_number": 6,
+    "commit_number": 108
+  },
+  "elouanb7/MSPR-B3-Deploiement-appli": {
+    "author_number": 6,
+    "commit_number": 92
+  },
+  "Loknar/loka-ord": {
+    "author_number": 11,
+    "commit_number": 658
+  },
+  "mapi223/JUMPlus": {
+    "author_number": 1,
+    "commit_number": 14
+  },
+  "HolyBarrel/CPP-Udemy-Course": {
+    "author_number": 4,
+    "commit_number": 101
+  },
+  "naomiajacobs/ColorPaletteReactTutorial": {
+    "author_number": 1,
+    "commit_number": 3
+  },
+  "DuarteSerrao/TS": {
+    "author_number": 5,
+    "commit_number": 29
+  },
+  "jimfergusondev/ChatGPTBuildsDelphiPolygonIOApiCalls": {
+    "author_number": 1,
+    "commit_number": 1
+  },
+  "harryallerston/RPI-Wireless-Hotspot": {
+    "author_number": 10,
+    "commit_number": 110
+  },
+  "labd/terraform-provider-storyblok": {
+    "author_number": 8,
+    "commit_number": 71
+  },
+  "dbt-labs/docs.getdbt.com": {
+    "author_number": 624,
+    "commit_number": 18888
+  },
+  "TurboWarp/extensions": {
+    "author_number": 48,
+    "commit_number": 619
+  },
+  "ymerkos/awtsfaria": {
+    "author_number": 4,
+    "commit_number": 1019
+  },
+  "lightward/mechanic-tasks": {
+    "author_number": 16,
+    "commit_number": 751
+  },
+  "repeatingbeats/dotfiles": {
+    "author_number": 1,
+    "commit_number": 23
+  },
+  "winksaville/scripts": {
+    "author_number": 1,
+    "commit_number": 167
+  },
+  "eodinzov94/IsraFit": {
+    "author_number": 2,
+    "commit_number": 73
+  },
+  "pstackebrandt/pstackebrandt.github.io": {
+    "author_number": 1,
+    "commit_number": 13
+  },
+  "Atulaya123/reddit-next13-prisma-sql": {
+    "author_number": 1,
+    "commit_number": 4
+  },
+  "PrivateBin/PrivateBin": {
+    "author_number": 132,
+    "commit_number": 2916
+  },
+  "gama-platform/gama.benchmark": {
+    "author_number": 4,
+    "commit_number": 16
+  },
+  "GillyRabutTsurwa/su-2025-rest-api": {
+    "author_number": 1,
+    "commit_number": 54
+  },
+  "Karunamon/pixlbot": {
+    "author_number": 5,
+    "commit_number": 99
+  },
+  "sqlalchemy/sqlalchemy": {
+    "author_number": 683,
+    "commit_number": 16663
+  },
+  "zzzeek/sqlalchemy": {
+    "author_number": 683,
+    "commit_number": 16663
+  },
+  "brennoflavio/nextcloud-alexa": {
+    "author_number": 3,
+    "commit_number": 54
+  },
+  "chaos-jetzt/website_pelican": {
+    "author_number": 16,
+    "commit_number": 127
+  },
+  "elliotrichh/github1": {
+    "author_number": 2,
+    "commit_number": 41
+  },
+  "gearboxworks/portainer-stacks": {
+    "author_number": 1,
+    "commit_number": 37
+  },
+  "Cissucalris9/cuemaker2": {
+    "author_number": 1,
+    "commit_number": 9
+  },
+  "temporalio/temporal": {
+    "author_number": 203,
+    "commit_number": 5528
+  },
+  "hoshotakamoto/banzukesurfing": {
+    "author_number": 2,
+    "commit_number": 17
+  },
+  "cwerdna19/ghoul-traders": {
+    "author_number": 1,
+    "commit_number": 26
+  },
+  "Buildstarted/linksfordevs": {
+    "author_number": 1,
+    "commit_number": 33415
+  },
+  "openai/evals": {
+    "author_number": 425,
+    "commit_number": 608
+  }
+}
