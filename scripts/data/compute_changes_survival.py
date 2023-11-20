@@ -19,7 +19,7 @@ Example:
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, NamedTuple
 
 import pandas as pd
 import unidiff
@@ -34,8 +34,14 @@ ERROR_ARGS = 1
 ERROR_OTHER = 2
 
 
+class GptCommitInfo(NamedTuple):
+    """Return value for process_single_commit() function"""
+    curr_commit_info: dict
+    line_survival_info: Optional[dict]
+
+
 def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, process_stats: dict) \
-        -> Tuple[dict, Optional[dict]]:
+        -> GptCommitInfo:
     commit_metadata = repo.get_commit_metadata(gpt_commit)
     augment_curr = {
         'Sha': gpt_commit,  # to be used for join
@@ -50,7 +56,7 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
         # TODO: add to lines_data even if commit is not merged into HEAD
         # (currently, so far all commits are found to be merged)
         process_stats['n_unmerged'] += 1
-        return augment_curr, None
+        return GptCommitInfo(augment_curr, None)
 
     # at this point we know that HEAD contains gpt_commit
     commits_from_HEAD = repo.count_commits(until_commit=gpt_commit)
@@ -64,7 +70,7 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
         tqdm.write(f"{err=}")
         augment_curr['error'] = True
         process_stats['n_errors'] += 1
-        return augment_curr, None
+        return GptCommitInfo(augment_curr, None)
 
     except unidiff.UnidiffParseError as err:
         tqdm.write(f"Project '{project_name}', commit {gpt_commit}\n"
@@ -72,7 +78,7 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
         tqdm.write(f"{err=}")
         augment_curr['error'] = True
         process_stats['n_errors'] += 1
-        return augment_curr, None
+        return GptCommitInfo(augment_curr, None)
 
     lines_survived, lines_total = changes_survival_perc(survival_info)
     augment_curr.update({
@@ -107,7 +113,8 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
         if survived_until:  # is not empty
             augment_curr['min_died_committer_timestamp'] = min(survived_until)
 
-    return augment_curr, survival_info
+    return GptCommitInfo(curr_commit_info=augment_curr,
+                         line_survival_info=survival_info)
 
 
 def process_commit_changed_lines(project_name: str, gpt_commit: str, survival_info: dict) -> List[dict]:
