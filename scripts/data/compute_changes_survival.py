@@ -157,7 +157,8 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
 
                         survived_until.append(blame_prev_timestamp)
 
-            tqdm.write(f"* {project_name} {gpt_commit[:8]} changes died at {sorted(survived_until)}")
+            # DEBUGGING for 'min_died_committer_timestamp'
+            #tqdm.write(f"* {project_name} {gpt_commit[:8]} changes died at {sorted(survived_until)}")
             if survived_until:  # is not empty
                 augment_curr['min_died_committer_timestamp'] = min(survived_until)
 
