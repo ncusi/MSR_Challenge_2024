@@ -18,6 +18,7 @@ Example:
 """
 import subprocess
 import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional, Tuple, List, NamedTuple
 
@@ -37,7 +38,8 @@ ERROR_OTHER = 2
 class GptCommitInfo(NamedTuple):
     """Return value for process_single_commit() function"""
     curr_commit_info: dict
-    line_survival_info: Optional[dict]
+    line_survival_info: Optional[dict] = None
+    blamed_commits_data: Optional[dict] = None
 
 
 def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, process_stats: dict) \
@@ -56,7 +58,7 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
         # TODO: add to lines_data even if commit is not merged into HEAD
         # (currently, so far all commits are found to be merged)
         process_stats['n_unmerged'] += 1
-        return GptCommitInfo(augment_curr, None)
+        return GptCommitInfo(augment_curr)
 
     # at this point we know that HEAD contains gpt_commit
     commits_from_HEAD = repo.count_commits(until_commit=gpt_commit)
@@ -70,7 +72,7 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
         tqdm.write(f"{err=}")
         augment_curr['error'] = True
         process_stats['n_errors'] += 1
-        return GptCommitInfo(augment_curr, None)
+        return GptCommitInfo(augment_curr)
 
     except unidiff.UnidiffParseError as err:
         tqdm.write(f"Project '{project_name}', commit {gpt_commit}\n"
@@ -78,7 +80,7 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
         tqdm.write(f"{err=}")
         augment_curr['error'] = True
         process_stats['n_errors'] += 1
-        return GptCommitInfo(augment_curr, None)
+        return GptCommitInfo(augment_curr)
 
     lines_survived, lines_total = changes_survival_perc(survival_info)
     augment_curr.update({
@@ -89,7 +91,9 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
     process_stats['lines_total_sum'] += lines_total
 
     # TODO: extract this into separate function
+    all_blame_commit_data = None
     if lines_survived < lines_total:
+        tqdm.write(f"{project_name}:{gpt_commit[:8]} {lines_survived} < {lines_total}")
         survived_until = []
 
         all_blame_commit_data = {}
@@ -114,10 +118,12 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
             augment_curr['min_died_committer_timestamp'] = min(survived_until)
 
     return GptCommitInfo(curr_commit_info=augment_curr,
-                         line_survival_info=survival_info)
+                         line_survival_info=survival_info,
+                         blamed_commits_data=all_blame_commit_data)
 
 
-def process_commit_changed_lines(project_name: str, gpt_commit: str, survival_info: dict) -> List[dict]:
+def process_commit_changed_lines(repo: GitRepo, project_name: str, gpt_commit: str,
+                                 survival_info: dict, blamed_commits_info: dict) -> List[dict]:
     lines_data = []
     for change_path, change_lines_list in survival_info.items():
         for change_line_info in change_lines_list:
@@ -125,6 +131,26 @@ def process_commit_changed_lines(project_name: str, gpt_commit: str, survival_in
                 prev_commit, prev_file = change_line_info['previous'].split(' ')
                 change_line_info['previous_commit'] = prev_commit
                 change_line_info['previous_filename'] = prev_file
+
+            for sha_key in 'Sha', 'commit', 'previous_commit':
+                if sha_key == 'previous_commit' and sha_key not in change_line_info:
+                    continue
+                if sha_key == 'Sha':
+                    commit_sha = gpt_commit
+                else:
+                    commit_sha = change_line_info[sha_key]
+                # TODO: create a function or transformation to remove this code duplication
+                if commit_sha in blamed_commits_info:
+                    change_line_info[f"{sha_key}_author_timestamp"] \
+                        = int(blamed_commits_info[commit_sha]['author-time'])
+                    change_line_info[f"{sha_key}_committer_timestamp"] \
+                        = int(blamed_commits_info[commit_sha]['committer-time'])
+                else:
+                    commit_metadata = repo.get_commit_metadata(commit_sha)
+                    change_line_info[f"{sha_key}_author_timestamp"] \
+                        = commit_metadata['author']['timestamp']
+                    change_line_info[f"{sha_key}_committer_timestamp"] \
+                        = commit_metadata['committer']['timestamp']
 
             lines_data.append({
                 'RepoName': project_name,
@@ -159,6 +185,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
     }
     augment_data = []
     lines_data = []
+    all_blamed_commits_info = defaultdict(dict)
     for row in tqdm(commits_df.itertuples(index=False, name='GptCommit'), desc='commit'):
         project_name = row.RepoName
         gpt_commit = row.Sha
@@ -175,11 +202,16 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
             # remember for re-use
             repo_cache[project_name] = repo
 
-        augment_curr, survival_info = process_single_commit(repo, project_name, gpt_commit, total_stats)
+        augment_curr, survival_info, blamed_commits_info \
+            = process_single_commit(repo, project_name, gpt_commit, total_stats)
         augment_data.append(augment_curr)
 
+        if blamed_commits_info is not None:
+            all_blamed_commits_info[project_name].update(blamed_commits_info)
+
         if survival_info is not None:
-            commit_lines_data = process_commit_changed_lines(project_name, gpt_commit, survival_info)
+            commit_lines_data = process_commit_changed_lines(repo, project_name, gpt_commit,
+                                                             survival_info, all_blamed_commits_info[project_name])
             lines_data.extend(commit_lines_data)
 
     if total_stats['n_skipped'] > 0:
