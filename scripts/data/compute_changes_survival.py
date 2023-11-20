@@ -19,7 +19,7 @@ Example:
 import subprocess
 import sys
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple, List
 
 import pandas as pd
 import unidiff
@@ -32,6 +32,101 @@ from src.utils.git import GitRepo, changes_survival_perc
 # constants
 ERROR_ARGS = 1
 ERROR_OTHER = 2
+
+
+def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, process_stats: dict) \
+        -> Tuple[dict, Optional[dict]]:
+    commit_metadata = repo.get_commit_metadata(gpt_commit)
+    augment_curr = {
+        'Sha': gpt_commit,  # to be used for join
+        'author_timestamp': commit_metadata['author']['timestamp'],
+        'committer_timestamp': commit_metadata['committer']['timestamp'],
+        'n_parents': len(commit_metadata['parents']),
+    }
+
+    is_merged = repo.check_merged_into(gpt_commit, 'HEAD')
+    augment_curr['is_merged_HEAD'] = bool(is_merged)
+    if not is_merged:
+        # TODO: add to lines_data even if commit is not merged into HEAD
+        # (currently, so far all commits are found to be merged)
+        process_stats['n_unmerged'] += 1
+        return augment_curr, None
+
+    # at this point we know that HEAD contains gpt_commit
+    commits_from_HEAD = repo.count_commits(until_commit=gpt_commit)
+    augment_curr['number_of_commits_from_HEAD'] = commits_from_HEAD
+
+    try:
+        commits_data, survival_info = repo.changes_survival(gpt_commit)
+        augment_curr['error'] = False
+
+    except subprocess.CalledProcessError as err:
+        tqdm.write(f"{err=}")
+        augment_curr['error'] = True
+        process_stats['n_errors'] += 1
+        return augment_curr, None
+
+    except unidiff.UnidiffParseError as err:
+        tqdm.write(f"Project '{project_name}', commit {gpt_commit}\n"
+                   f"  at '{repo!s}'")
+        tqdm.write(f"{err=}")
+        augment_curr['error'] = True
+        process_stats['n_errors'] += 1
+        return augment_curr, None
+
+    lines_survived, lines_total = changes_survival_perc(survival_info)
+    augment_curr.update({
+        'change_lines_survived': lines_survived,
+        'change_lines_total': lines_total,
+    })
+    process_stats['lines_survived_sum'] += lines_survived
+    process_stats['lines_total_sum'] += lines_total
+
+    # TODO: extract this into separate function
+    if lines_survived < lines_total:
+        survived_until = []
+
+        all_blame_commit_data = {}
+        for change_path_data in commits_data.values():
+            all_blame_commit_data.update(change_path_data)
+
+        for change_path_data in commits_data.values():
+            for blame_commit_data in change_path_data.values():
+                if 'previous' in blame_commit_data:
+                    blame_prev = blame_commit_data['previous'].split(' ')[0]
+
+                    if blame_prev in all_blame_commit_data:
+                        blame_prev_timestamp = int(all_blame_commit_data[blame_prev]['committer-time'])
+                    else:
+                        blame_prev_timestamp = repo.get_commit_metadata(blame_prev)['committer']['timestamp']
+
+                    survived_until.append(blame_prev_timestamp)
+
+        # DEBUGGING for 'min_died_committer_timestamp'
+        # tqdm.write(f"* {project_name} {gpt_commit[:8]} changes died at {sorted(survived_until)}")
+        if survived_until:  # is not empty
+            augment_curr['min_died_committer_timestamp'] = min(survived_until)
+
+    return augment_curr, survival_info
+
+
+def process_commit_changed_lines(project_name: str, gpt_commit: str, survival_info: dict) -> List[dict]:
+    lines_data = []
+    for change_path, change_lines_list in survival_info.items():
+        for change_line_info in change_lines_list:
+            if 'previous' in change_line_info:
+                prev_commit, prev_file = change_line_info['previous'].split(' ')
+                change_line_info['previous_commit'] = prev_commit
+                change_line_info['previous_filename'] = prev_file
+
+            lines_data.append({
+                'RepoName': project_name,
+                'Sha': gpt_commit,
+                'filename': change_path,
+                **change_line_info,
+            })
+
+    return lines_data
 
 
 def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -47,11 +142,11 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
     """
     commits_df.rename(columns={'ModelGPT3.5': 'ModelGPT3_5'}, inplace=True)
 
-    n_skipped = 0
-    n_errors = 0
-    n_unmerged = 0
     repo_cache = {}
     total_stats = {
+        'n_skipped': 0,
+        'n_errors': 0,
+        'n_unmerged': 0,
         'lines_survived_sum': 0,
         'lines_total_sum': 0,
     }
@@ -63,7 +158,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
 
         project_dir = project_name.split('/')[-1]
         if project_dir not in repo_clone_data:
-            n_skipped += 1
+            total_stats['n_skipped'] += 1
             continue
 
         repo = repo_cache.get(project_name, None)
@@ -73,103 +168,22 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
             # remember for re-use
             repo_cache[project_name] = repo
 
-        commit_metadata = repo.get_commit_metadata(gpt_commit)
-        augment_curr = {
-            'Sha': row.Sha,  # to be used for join
-            'author_timestamp': commit_metadata['author']['timestamp'],
-            'committer_timestamp': commit_metadata['committer']['timestamp'],
-            'n_parents': len(commit_metadata['parents']),
-        }
-
-        is_merged = repo.check_merged_into(gpt_commit, 'HEAD')
-        augment_curr['is_merged_HEAD'] = bool(is_merged)
-        if not is_merged:
-            # TODO: add to lines_data even if commit is not merged into HEAD
-            # (currently, so far all commits are found to be merged)
-            augment_data.append(augment_curr)
-            n_unmerged += 1
-            continue
-
-        # at this point we know that HEAD contains gpt_commit
-        commits_from_HEAD = repo.count_commits(until_commit=gpt_commit)
-        augment_curr['number_of_commits_from_HEAD'] = commits_from_HEAD
-
-        try:
-            commits_data, survival_info = repo.changes_survival(gpt_commit)
-            augment_curr['error'] = False
-
-        except subprocess.CalledProcessError as err:
-            tqdm.write(f"{err=}")
-            augment_curr['error'] = True
-            augment_data.append(augment_curr)
-            n_errors += 1
-            continue
-
-        except unidiff.UnidiffParseError as err:
-            tqdm.write(f"Project '{project_name}', commit {gpt_commit}\n"
-                       f"  at '{repo!s}'")
-            tqdm.write(f"{err=}")
-            augment_curr['error'] = True
-            augment_data.append(augment_curr)
-            n_errors += 1
-            continue
-
-        lines_survived, lines_total = changes_survival_perc(survival_info)
-        augment_curr.update({
-            'change_lines_survived': lines_survived,
-            'change_lines_total': lines_total,
-        })
-        total_stats['lines_survived_sum'] += lines_survived
-        total_stats['lines_total_sum'] += lines_total
-
-        # TODO: extract this into separate function
-        for change_path, change_lines_list in survival_info.items():
-            for change_line_info in change_lines_list:
-                if 'previous' in change_line_info:
-                    prev_commit, prev_file = change_line_info['previous'].split(' ')
-                    change_line_info['previous_commit'] = prev_commit
-                    change_line_info['previous_filename'] = prev_file
-
-                lines_data.append({
-                    'RepoName': project_name,
-                    'Sha': gpt_commit,
-                    'filename': change_path,
-                    **change_line_info,
-                })
-
-        # TODO: extract this into separate function
-        if lines_survived < lines_total:
-            survived_until = []
-
-            all_blame_commit_data = {}
-            for change_path_data in commits_data.values():
-                all_blame_commit_data.update(change_path_data)
-
-            for change_path_data in commits_data.values():
-                for blame_commit_data in change_path_data.values():
-                    if 'previous' in blame_commit_data:
-                        blame_prev = blame_commit_data['previous'].split(' ')[0]
-
-                        if blame_prev in all_blame_commit_data:
-                            blame_prev_timestamp = int(all_blame_commit_data[blame_prev]['committer-time'])
-                        else:
-                            blame_prev_timestamp = repo.get_commit_metadata(blame_prev)['committer']['timestamp']
-
-                        survived_until.append(blame_prev_timestamp)
-
-            # DEBUGGING for 'min_died_committer_timestamp'
-            #tqdm.write(f"* {project_name} {gpt_commit[:8]} changes died at {sorted(survived_until)}")
-            if survived_until:  # is not empty
-                augment_curr['min_died_committer_timestamp'] = min(survived_until)
-
+        augment_curr, survival_info = process_single_commit(repo, project_name, gpt_commit, total_stats)
         augment_data.append(augment_curr)
 
-    if n_skipped > 0:
-        print(f"Skipped {n_skipped} rows because repo was not cloned", file=sys.stderr)
-    if n_errors > 0:
-        print(f"Skipped {n_errors} rows because of an error", file=sys.stderr)
-    if n_unmerged > 0:
-        print(f"There were {n_unmerged} commits not merged into HEAD", file=sys.stderr)
+        if survival_info is not None:
+            commit_lines_data = process_commit_changed_lines(project_name, gpt_commit, survival_info)
+            lines_data.extend(commit_lines_data)
+
+    if total_stats['n_skipped'] > 0:
+        print(f"Skipped {total_stats['n_skipped']} rows because repo was not cloned",
+              file=sys.stderr)
+    if total_stats['n_errors'] > 0:
+        print(f"Skipped {total_stats['n_errors']} rows because of an error",
+              file=sys.stderr)
+    if total_stats['n_unmerged'] > 0:
+        print(f"There were {total_stats['n_unmerged']} commits not merged into HEAD",
+              file=sys.stderr)
 
     print(f"Created {len(repo_cache)} of GitRepo objects", file=sys.stderr)
     print(f"Lines survival stats: {total_stats}", file=sys.stderr)
