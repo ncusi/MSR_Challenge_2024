@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 from pathlib import Path
+from pprint import pprint
 
 from src.tests import slow_test
 from src.utils.git import GitRepo, DiffSide, changes_survival_perc
@@ -355,6 +356,7 @@ class GitTestCase(unittest.TestCase):
             self.assertCountEqual(survival_info.keys(), ['subdir/subfile'])
             self.assertEqual(len(survival_info['subdir/subfile']), 1)
             self.assertNotIn('previous', survival_info['subdir/subfile'][0])
+            pprint(survival_info)
 
         with self.subTest("changes survival from v1"):
             _, survival_info = self.repo.changes_survival(commit="v1",
@@ -369,6 +371,7 @@ class GitTestCase(unittest.TestCase):
             self.assertIn('previous', survival_info['subdir/subfile'][0])
             # all 5 lines survived from 'example_file', 1 line in 'subdir/subfile' did not
             self.assertEqual(changes_survival_perc(survival_info), (5, 5+1))
+            pprint(survival_info)
 
     def test_count_commits(self):
         """Basic tests for GitRepo.count_commits() method"""

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Usage: {script_name} <commit_sharings_df> <repositories.json> <output_file_df>
+"""Usage: {script_name} <commit_sharings_df> <repositories.json> <output_commit_df> <output_lines_df>
 
 Compute survival of changed lines for each commit in the <commit_sharings_df>,
 using cloned repositories (as described by <repositories.json>) and the
@@ -8,14 +8,18 @@ reverse blame.
 
 While at it, add some commit metadata to the dataframe.
 
+TODO: describe <output_lines_df>
+
 Example:
     python scripts/data/compute_changes_survival.py \\
         data/interim/commit_sharings_df.csv data/repositories_download_status.json \\
-        data/interim/commit_sharings_changes_survival_df.csv
+        data/interim/commit_sharings_changes_survival_df.csv \\
+        data/interim/commit_sharings_lines_survival_df.csv
 """
 import subprocess
 import sys
 from pathlib import Path
+from typing import Tuple
 
 import pandas as pd
 import unidiff
@@ -30,7 +34,7 @@ ERROR_ARGS = 1
 ERROR_OTHER = 2
 
 
-def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataFrame:
+def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Process commits in the `commits_df` dataframe, augmenting the data
 
     For each commit, compute how many of its post-image lines survived to current
@@ -39,7 +43,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
     :param pd.DataFrame commits_df: DataFrame with commits sharings from DevGPT
     :param dict repo_clone_data: information about cloned project's repositories
     :return: DataFrame augmented with changes survival information
-    :rtype: pd.DataFrame
+    :rtype: (pd.DataFrame, pd.DataFrame)
     """
     commits_df.rename(columns={'ModelGPT3.5': 'ModelGPT3_5'}, inplace=True)
 
@@ -52,6 +56,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
         'lines_total_sum': 0,
     }
     augment_data = []
+    lines_data = []
     for row in tqdm(commits_df.itertuples(index=False, name='GptCommit'), desc='commit'):
         project_name = row.RepoName
         gpt_commit = row.Sha
@@ -79,6 +84,8 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
         is_merged = repo.check_merged_into(gpt_commit, 'HEAD')
         augment_curr['is_merged_HEAD'] = bool(is_merged)
         if not is_merged:
+            # TODO: add to lines_data even if commit is not merged into HEAD
+            # (currently, so far all commits are found to be merged)
             augment_data.append(augment_curr)
             n_unmerged += 1
             continue
@@ -114,6 +121,21 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
         })
         total_stats['lines_survived_sum'] += lines_survived
         total_stats['lines_total_sum'] += lines_total
+
+        # TODO: extract this into separate function
+        for change_path, change_lines_list in survival_info.items():
+            for change_line_info in change_lines_list:
+                if 'previous' in change_line_info:
+                    prev_commit, prev_file = change_line_info['previous'].split(' ')
+                    change_line_info['previous_commit'] = prev_commit
+                    change_line_info['previous_filename'] = prev_file
+
+                lines_data.append({
+                    'RepoName': project_name,
+                    'Sha': gpt_commit,
+                    'filename': change_path,
+                    **change_line_info,
+                })
 
         # TODO: extract this into separate function
         if lines_survived < lines_total:
@@ -157,24 +179,30 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
           file=sys.stderr)
     augment_df = pd.DataFrame.from_records(augment_data)
 
+    print(f"Creating dataframe with line survival data from {len(lines_data)} records...",
+          file=sys.stderr)
+    lines_df = pd.DataFrame.from_records(lines_data)
+
     print(f"Merging {commits_df.shape} with {augment_df.shape} dataframes on 'Sha'...", file=sys.stderr)
-    return pd.merge(commits_df, augment_df, on='Sha', sort=False)
+    return pd.merge(commits_df, augment_df, on='Sha', sort=False), lines_df
 
 
 @timed
 def main():
     # handle command line parameters
-    # {script_name} <commit_sharings_df> <repositories.json> <output_file_df>
-    if len(sys.argv) != 3 + 1:  # sys.argv[0] is script name
+    # {script_name} <commit_sharings_df> <repositories.json>  <output_commit_df> <output_lines_df>
+    if len(sys.argv) != 4 + 1:  # sys.argv[0] is script name
         print(__doc__.format(script_name=sys.argv[0]))
         sys.exit(ERROR_ARGS)
 
     commit_sharings_path = Path(sys.argv[1])
     repositories_info_path = Path(sys.argv[2])
-    output_file_path = Path(sys.argv[3])
+    output_commit_file_path = Path(sys.argv[3])
+    output_lines_file_path = Path(sys.argv[4])
 
-    # ensure that directory leading to output_file_path exists
-    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+    # ensure that directory/directories leading to output_*_file_path exists
+    output_commit_file_path.parent.mkdir(parents=True, exist_ok=True)
+    output_lines_file_path.parent.mkdir(parents=True, exist_ok=True)
 
     # .......................................................................
     # PROCESSING
@@ -185,11 +213,14 @@ def main():
 
     print(f"Processing {commits_df.shape} commit sharings data...",
           file=sys.stderr)
-    augmented_df = process_commits(commits_df, repo_clone_data)
+    augmented_df, lines_df = process_commits(commits_df, repo_clone_data)
 
     print(f"Writing {augmented_df.shape} of augmented commit sharings data\n"
-          f"  to '{output_file_path}'", file=sys.stderr)
-    augmented_df.to_csv(output_file_path, index=False)
+          f"  to '{output_commit_file_path}'", file=sys.stderr)
+    augmented_df.to_csv(output_commit_file_path, index=False)
+    print(f"Writing {lines_df.shape} of changed lines survival data\n"
+          f"  to '{output_lines_file_path}'", file=sys.stderr)
+    lines_df.to_csv(output_lines_file_path, index=False)
 
 
 if __name__ == '__main__':
