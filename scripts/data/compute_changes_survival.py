@@ -73,6 +73,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
             'Sha': row.Sha,  # to be used for join
             'author_timestamp': commit_metadata['author']['timestamp'],
             'committer_timestamp': commit_metadata['committer']['timestamp'],
+            'n_parents': len(commit_metadata['parents']),
         }
 
         is_merged = repo.check_merged_into(gpt_commit, 'HEAD')
@@ -87,7 +88,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
         augment_curr['number_of_commits_from_HEAD'] = commits_from_HEAD
 
         try:
-            _, survival_info = repo.changes_survival(gpt_commit)
+            commits_data, survival_info = repo.changes_survival(gpt_commit)
             augment_curr['error'] = False
 
         except subprocess.CalledProcessError as err:
@@ -113,6 +114,22 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> pd.DataF
         })
         total_stats['lines_survived_sum'] += lines_survived
         total_stats['lines_total_sum'] += lines_total
+
+        if lines_survived < lines_total:
+            survived_until = []
+            for blame_commit_data in commits_data.values():
+                if 'previous' in blame_commit_data:
+                    blame_prev = blame_commit_data['previous'].split(' ')[0]
+
+                    if blame_prev in commits_data:
+                        blame_prev_timestamp = int(commits_data[blame_prev]['committer-time'])
+                    else:
+                        blame_prev_timestamp = repo.get_commit_metadata(blame_prev)['committer']['timestamp']
+
+                    survived_until.append(blame_prev_timestamp)
+
+            if survived_until:  # is not empty
+                augment_curr['min_died_committer_timestamp'] = min(survived_until)
 
         augment_data.append(augment_curr)
 
