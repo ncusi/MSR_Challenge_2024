@@ -1,0 +1,57 @@
+vars:
+  # DevGPT dataset: https://github.com/NAIST-SE/DevGPT
+  - DevGPT:
+      version: 'v9'
+      zenodo_id: 10086809
+  # where to clone Git repositories
+  - repositories_dir: /mnt/data/MSR_Challenge_2024/repositories/
+stages:
+  download_DevGPT:
+    desc: 'Download DevGPT dataset ${DevGPT.version} from Zenodo'
+    cmd:
+      - dvc get-url --force https://zenodo.org/records/${DevGPT.zenodo_id}/files/DevGPT.zip?download=1
+      - mkdir -p data/external
+      - unzip DevGPT.zip -d data/external/DevGPT
+      - rm DevGPT.zip
+    outs:
+      - data/external/DevGPT/
+
+  clone_repos:
+    desc: 'Clone all repositories included in DevGPT dataset'
+    cmd: >-
+      python scripts/data/download_repositories.py
+      data/external/DevGPT/ ${repositories_dir}
+      data/repositories_download_status.json
+    deps:
+      - scripts/data/download_repositories.py
+      - data/external/DevGPT/
+    outs:
+      - data/repositories_download_status.json:
+          cache: false
+
+  commit_agg:
+    desc: 'Latest commit sharings to CSV + per-project aggregates'
+    cmd: >-
+      python scripts/data/commit_sharings_to_agg.py
+      data/external/DevGPT/ data/repositories_download_status.json
+      data/interim/
+    deps:
+      - scripts/data/commit_sharings_to_agg.py
+      - data/external/DevGPT/
+      - data/repositories_download_status.json
+    outs:
+      - data/interim/commit_sharings_df.csv
+      - data/interim/commit_sharings_groupby_repo_df.csv
+
+  commit_survival:
+    desc: 'Changes survival (via blame) for latest commit sharings'
+    cmd: >-
+      python scripts/data/compute_changes_survival.py
+      data/interim/commit_sharings_df.csv data/repositories_download_status.json
+      data/interim/commit_sharings_changes_survival_df.csv
+    deps:
+      - scripts/data/compute_changes_survival.py
+      - data/repositories_download_status.json
+      - data/interim/commit_sharings_df.csv
+    outs:
+      - data/interim/commit_sharings_changes_survival_df.csv

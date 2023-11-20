@@ -1,0 +1,79 @@
+schema: '2.0'
+stages:
+  download_DevGPT:
+    cmd:
+    - dvc get-url --force https://zenodo.org/records/10086809/files/DevGPT.zip?download=1
+    - mkdir -p data/external
+    - unzip DevGPT.zip -d data/external/DevGPT
+    - rm DevGPT.zip
+    outs:
+    - path: data/external/DevGPT/
+      hash: md5
+      md5: 223e6501a84a339b341bfb843595d1b2.dir
+      size: 4182300528
+      nfiles: 65
+  clone_repos:
+    cmd: python scripts/data/download_repositories.py data/external/DevGPT/ /mnt/data/MSR_Challenge_2024/repositories/
+      data/repositories_download_status.json
+    deps:
+    - path: data/external/DevGPT/
+      hash: md5
+      md5: 223e6501a84a339b341bfb843595d1b2.dir
+      size: 4182300528
+      nfiles: 65
+    - path: scripts/data/download_repositories.py
+      hash: md5
+      md5: a51a58dc160592644cd297c6b327a05b
+      size: 4940
+    outs:
+    - path: data/repositories_download_status.json
+      hash: md5
+      md5: 6fef69f970bdae97701e7507f3fd0773
+      size: 163865
+  commit_agg:
+    cmd: python scripts/data/commit_sharings_to_agg.py data/external/DevGPT/ data/repositories_download_status.json
+      data/interim/
+    deps:
+    - path: data/external/DevGPT/
+      hash: md5
+      md5: 223e6501a84a339b341bfb843595d1b2.dir
+      size: 4182300528
+      nfiles: 65
+    - path: data/repositories_download_status.json
+      hash: md5
+      md5: 6fef69f970bdae97701e7507f3fd0773
+      size: 163865
+    - path: scripts/data/commit_sharings_to_agg.py
+      hash: md5
+      md5: a24714f96b4cd5ab338d1c25f0495b5b
+      size: 6319
+    outs:
+    - path: data/interim/commit_sharings_df.csv
+      hash: md5
+      md5: d6095d145d527872f2f3a4cb48102014
+      size: 483444
+    - path: data/interim/commit_sharings_groupby_repo_df.csv
+      hash: md5
+      md5: fb48677300a61d2877503ec897f0c4e5
+      size: 4994
+  commit_survival:
+    cmd: python scripts/data/compute_changes_survival.py data/interim/commit_sharings_df.csv
+      data/repositories_download_status.json data/interim/commit_sharings_changes_survival_df.csv
+    deps:
+    - path: data/interim/commit_sharings_df.csv
+      hash: md5
+      md5: d6095d145d527872f2f3a4cb48102014
+      size: 483444
+    - path: data/repositories_download_status.json
+      hash: md5
+      md5: 6fef69f970bdae97701e7507f3fd0773
+      size: 163865
+    - path: scripts/data/compute_changes_survival.py
+      hash: md5
+      md5: fbd035cb376e1d085a1bd7d2a54d1944
+      size: 6275
+    outs:
+    - path: data/interim/commit_sharings_changes_survival_df.csv
+      hash: md5
+      md5: 1eaf20e1c7474f77267cedab9ecd9840
+      size: 518372
