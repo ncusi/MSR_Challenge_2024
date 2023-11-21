@@ -93,7 +93,6 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
     # TODO: extract this into separate function
     all_blame_commit_data = None
     if lines_survived < lines_total:
-        tqdm.write(f"{project_name}:{gpt_commit[:8]} {lines_survived} < {lines_total}")
         survived_until = []
 
         all_blame_commit_data = {}
