@@ -2,7 +2,18 @@
 
 https://2024.msrconf.org/track/msr-2024-mining-challenge
 
-## Virtual environment
+## First time setup
+
+You can set up the environment for using this project, following
+the recommended practices (described in later part of this document),
+by running the [`init.bash`](init.bash) Bash script, and following
+its instructions.
+
+Note that this script assumes that it is run on Linux, or Linux-like
+system.  For other operating systems, you are probably better following
+the steps described in this document manually.
+
+### Virtual environment
 
 To avoid dependency conflicts, it is strongly recommended to create
 a [virtual environment][venv], for example with:
@@ -28,7 +39,7 @@ packages, but Python is configured in a very specific way:
 
 [venv]: https://python.readthedocs.io/en/stable/library/venv.html
 
-## Installing dependencies
+### Installing dependencies
 
 You can install dependencies defined in [requirements.txt][] file
 with `pip` using the following command:
