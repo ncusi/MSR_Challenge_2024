@@ -44,7 +44,16 @@ class GptCommitInfo(NamedTuple):
 
 def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, process_stats: dict) \
         -> GptCommitInfo:
-    commit_metadata = repo.get_commit_metadata(gpt_commit)
+    try:
+        commit_metadata = repo.get_commit_metadata(gpt_commit)
+    except subprocess.CalledProcessError as err:
+        tqdm.write("ERROR when calling repo.get_commit_metadata(gpt_commit)")
+        tqdm.write(f"{err=}")
+        if hasattr(err, 'stderr') and err.stderr:
+            tqdm.write(f"-----\n{err.stderr}\n-----")
+        tqdm.write("Exiting...")
+        sys.exit(ERROR_OTHER)
+
     augment_curr = {
         'Sha': gpt_commit,  # to be used for join
         'author_timestamp': commit_metadata['author']['timestamp'],
