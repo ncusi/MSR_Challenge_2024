@@ -227,8 +227,13 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
 
     print(f"Created {len(repo_cache)} of GitRepo objects", file=sys.stderr)
     print(f"Lines survival stats: {total_stats}", file=sys.stderr)
-    print(f"  {100.0*total_stats['lines_survived_sum']/total_stats['lines_total_sum']:.2f}% lines survived",
-          file=sys.stderr)
+    if total_stats['lines_total_sum'] > 0:
+        print(f"  {100.0*total_stats['lines_survived_sum']/total_stats['lines_total_sum']:.2f}% lines survived",
+              file=sys.stderr)
+    else:
+        print(f"WARNING: captured {total_stats['lines_total_sum']} changed lines "
+              f"and {total_stats['lines_survived_sum']} surviving lines",
+              file=sys.stderr)
 
     print(f"Creating dataframe with augmentation data from {len(augment_data)} records...",
           file=sys.stderr)
