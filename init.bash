@@ -32,6 +32,17 @@ else
 EOF
 fi
 
+if [ ! -e 'data/external/DevGPT' ]; then
+    if [ -d '/mnt/data/MSR_Challenge_2024/DevGPT-data.v9' ]; then
+        echo "Linking '/mnt/data/MSR_Challenge_2024/DevGPT-data.v9'"
+        ln -s /mnt/data/MSR_Challenge_2024/DevGPT-data.v9 data/external/DevGPT
+    else
+        echo "Could not find '/mnt/data/MSR_Challenge_2024/DevGPT-data.v9' directory"
+    fi
+else
+    echo "'data/external/DevGPT' already exists"
+fi
+
 # getting data from DVC
 echo "Retrieving data from DVC"
 dvc pull
