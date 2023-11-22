@@ -9,5 +9,9 @@ requests==2.31.0
 unidiff==0.7.5
 setuptools==69.0.2
 
+# only used in notebooks
+numpy==1.26.2
+matplotlib==3.8.2
+
 # tools
 dvc==3.30.1
