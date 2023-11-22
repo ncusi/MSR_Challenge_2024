@@ -6,9 +6,16 @@ Compute survival of changed lines for each commit in the <commit_sharings_df>,
 using cloned repositories (as described by <repositories.json>) and the
 reverse blame.
 
-While at it, add some commit metadata to the dataframe.
+While at it, add some commit metadata to the dataframe.  This information
+is gathered into dataframe and saved in the <output_commit_df>.
 
-TODO: describe <output_lines_df>
+Information about the fate of each post-image changed line ("added" line in
+the unified diff of commit changes), for example in which commit it vanished
+if it did vanish, is gathered into dataframe and saved in the <output_lines_df>.
+
+See docstring for :func:`process_single_commit` to find columns added to original
+<commit_sharings_df> columns in <output_commit_df>, and docstring for
+:func:`process_commit_changed_lines` to find columns in <output_lines_df>.
 
 Example:
     python scripts/data/compute_changes_survival.py \\
@@ -18,7 +25,7 @@ Example:
 """
 import subprocess
 import sys
-from collections import defaultdict
+from collections import defaultdict, Counter
 from pathlib import Path
 from typing import Optional, Tuple, List, NamedTuple
 
@@ -42,8 +49,55 @@ class GptCommitInfo(NamedTuple):
     blamed_commits_data: Optional[dict] = None
 
 
-def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, process_stats: dict) \
-        -> GptCommitInfo:
+def process_single_commit(repo: GitRepo,
+                          project_name: str, gpt_commit: str,
+                          process_stats: dict) -> GptCommitInfo:
+    """Process single commit from DevGPT dataset, computing its survival info
+
+    Using reverse blame for each of lines "added" by the patch of `gpt_commit`,
+    find if some of them vanish at some point, or if they all survive to present
+    day (until HEAD).  The result of reverse blame is added to the return
+    value of this function, together with data about the commit it computed
+    or extracted.
+
+    This function returns GptCommitInfo named tuple, where first field,
+    `curr_commit_info`, contains information about the processed commit,
+    `line_survival_info` comes directly from repo.changes_survival(),
+    and `blamed_commits_data` is information about blamed commits
+    from repo.changes_survival() post-processed to be a dict with
+    commits SHA-1 identifiers as keys, and commit data as values.
+
+    The data in `curr_commit_info` has the following structure:
+    - 'Sha': SHA-1 identifier of commit from DevGPT, to be used for join
+      with the <commit_sharings_df> data
+    - 'author_timestamp': Unix timestamp of when `Sha` commit was authored,
+      should be same date as in `AuthorAt` field in DevGPT dataset
+    - 'committer_timestamp': Unix timestamp of when `Sha` commit was
+      committed to repo, should be the same date as `CommitAt` from DevGPT
+    - 'n_parents': number of `Sha` commit parents, to distinguish merge
+      and root commits
+    - 'is_merged_HEAD': boolean value denoting whether `Sha` is merged
+      into HEAD, or in other words whether HEAD codeline contains `Sha`
+    - `error`: boolean value, whether there were errors while trying to
+      compute reverse blame for the commit; if True all following fields
+      will be missing (will be N/A in the dataframe)
+    - 'change_lines_survived': number of lines in post-image that survived
+      until present day (until HEAD)
+    - 'change_lines_total': total number of lines in post-image of `Sha`
+      ("added" lines in unified diff of `Sha` commit changes)
+    - 'min_died_committer_timestamp': Unix timestamp of earliest date
+      when first line of `Sha` post-image changes vanished; missing
+      if all change lines suvived
+
+    :param GitRepo repo: local, cloned `project_name` repository
+    :param str project_name: name of the project (full name on GitHub)
+        e.g. "sqlalchemy/sqlalchemy"
+    :param str gpt_commit: commit from DevGPT dataset, for example one
+        where its commit message includes ChatGPT sharing link
+    :param dict process_stats: used to gather statistics about the process
+    :return: data about the commit, and reverse blame info
+    :rtype: GptCommitInfo
+    """
     try:
         commit_metadata = repo.get_commit_metadata(gpt_commit)
     except subprocess.CalledProcessError as err:
@@ -132,8 +186,74 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
                          blamed_commits_data=all_blame_commit_data)
 
 
-def process_commit_changed_lines(repo: GitRepo, project_name: str, gpt_commit: str,
-                                 survival_info: dict, blamed_commits_info: dict) -> List[dict]:
+def process_commit_changed_lines(repo: GitRepo,
+                                 project_name: str, gpt_commit: str,
+                                 survival_info: dict, blamed_commits_info: dict,
+                                 process_stats: dict) -> List[dict]:
+    """Compute survival for each change (post-image) line in given commit
+
+    Using reverse blame for each of lines "added" by the patch of `gpt_commit`,
+    find if they vanish at some point, or if they survive to present day
+    (until HEAD).
+
+    Fill in information about relevant commits related to reverse history
+    of the line: last commit that line was seen in the same form as in
+    `gpt_commit`, first commit that does not have the line in question
+    (if there is such commit), and of course about the starting commit:
+    `gpt_commit`.  The part of per-commit information that is needed for
+    survival analysis is the timestamp (the author timestamp, and the
+    committer timestamp).
+
+    The output of 'git blame --reverse' uses the same nomenclature, the
+    same terms, as ordinary 'git blame' - which is much more common, and
+    which was created first.
+
+    The returned data has the following structure (dicts on the list
+    have the following keys):
+    - 'RepoName': full name of repository, from DevGPT dataset, in which
+      commit identified `Sha` can e found
+    - 'Sha': SHA-1 identifier of commit from DevGPT, can be used for join
+      (the same field name as in DevGPT dataset files)
+    - 'Sha_filename': post-image name of file changed by `Sha` commit;
+      only those files changed by `Sha` commits for which there is
+      non-empty post-image are included in the "dataframe"
+    - 'Sha_lineno': line number in `Sha_filename` at `Sha`
+    - 'last_commit': SHA-1 identifier of the last commit (in chronological
+      order starting from `Sha`) where given line still exists
+    - 'last_filename': file in which the line is at `last_commit`,
+      taking into account code movement and code copying, if 'git blame'
+      was configured to consider those
+    - 'last_lineno': line number in `last_filename` at `last_commit`
+    - 'line': the contents of the line (present both in `Sha` and
+      `last_commit`)
+    - 'next_commit': SHA-1 identifier of the next commit after `last_commit`,
+      i.e. commit that has `last_commit` as a parent, and which do not
+      contain the line in question any longer; might be N/A if line
+      survived until present (until HEAD)
+    - 'next_filename': name of `last_filename` in `next_commit`,
+      taking into account file renames if 'git blame' was configured
+      to do so; it there is no `next_commit` it is None / N/A
+    - 'Sha_author_timestamp', 'Sha_committer_timestamp': Unix timestamp
+      of when `Sha` commit was authored, and when it was committed to repo
+    - 'last_author_timestamp', 'last_committer_timestamp': as above,
+      but for `last_commit` commit
+    - 'next_author_timestamp', 'next_committer_timestamp': as above,
+      but for `next_commit` commit, it it exists, else None / N/A
+
+    :param GitRepo repo: local, cloned `project_name` repository
+    :param str project_name: name of the project (full name on GitHub)
+        e.g. "sqlalchemy/sqlalchemy"
+    :param str gpt_commit: commit from DevGPT dataset, for example one
+        where its commit message includes ChatGPT sharing link
+    :param dict survival_info: reverse blame information about lines,
+        generated by repo.changes_survival() method
+    :param dict blamed_commits_info: information about blamed commits,
+        gathered per-project from different reverse blame runs
+    :param dict process_stats: used to gather statistics about the process
+    :return: information about lines lifetime, in a format suitable for
+        converting into dataframe with pd.DataFrame.from_records()
+    :rtype: list[dict]
+    """
     lines_data = []
     for change_path, change_lines_list in survival_info.items():
         for change_line_info in change_lines_list:
@@ -151,22 +271,47 @@ def process_commit_changed_lines(repo: GitRepo, project_name: str, gpt_commit: s
                     commit_sha = change_line_info[sha_key]
                 # TODO: create a function or transformation to remove this code duplication
                 if commit_sha in blamed_commits_info:
+                    process_stats[f"{sha_key}_metadata_from_blame"] += 1
                     change_line_info[f"{sha_key}_author_timestamp"] \
                         = int(blamed_commits_info[commit_sha]['author-time'])
                     change_line_info[f"{sha_key}_committer_timestamp"] \
                         = int(blamed_commits_info[commit_sha]['committer-time'])
                 else:
+                    process_stats[f"{sha_key}_metadata_from_repo"] += 1
                     commit_metadata = repo.get_commit_metadata(commit_sha)
                     change_line_info[f"{sha_key}_author_timestamp"] \
                         = commit_metadata['author']['timestamp']
                     change_line_info[f"{sha_key}_committer_timestamp"] \
                         = commit_metadata['committer']['timestamp']
+                    # use blamed_commits_info as cache
+                    blamed_commits_info[commit_sha] = {
+                        'author-time': commit_metadata['author']['timestamp'],
+                        'committer-time': commit_metadata['committer']['timestamp'],
+                    }
 
             lines_data.append({
+                # the same field names as used in DevGPT dataset
                 'RepoName': project_name,
                 'Sha': gpt_commit,
-                'filename': change_path,
-                **change_line_info,
+                # field names renamed to be more meaningful
+                'Sha_filename': change_path,
+                'Sha_lineno': change_line_info['final'],
+                'last_commit': change_line_info['commit'],
+                'last_filename': change_line_info['original_filename'],
+                'last_lineno': change_line_info['original'],
+                'line': change_line_info['line'],
+                'next_commit':
+                    change_line_info.get('previous_commit', None),
+                'next_filename':
+                    change_line_info.get('previous_filename', None),
+                'Sha_author_timestamp': change_line_info['Sha_author_timestamp'],
+                'Sha_committer_timestamp': change_line_info['Sha_committer_timestamp'],
+                'last_author_timestamp': change_line_info['commit_author_timestamp'],
+                'last_committer_timestamp': change_line_info['commit_committer_timestamp'],
+                'next_author_timestamp':
+                    change_line_info.get('previous_commit_author_timestamp', None),
+                'next_committer_timestamp':
+                    change_line_info.get('previous_commit_committer_timestamp', None),
             })
 
     return lines_data
@@ -178,21 +323,27 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
     For each commit, compute how many of its post-image lines survived to current
     state of the project, and use it to augment per-commit data.
 
+    For each of post-image change lines ("added" lines in unified diff), gather
+    and extract information about its survival, using reverse git blame.
+
     :param pd.DataFrame commits_df: DataFrame with commits sharings from DevGPT
     :param dict repo_clone_data: information about cloned project's repositories
-    :return: DataFrame augmented with changes survival information
+    :return: tuple of DataFrame augmented with changes survival information,
+        and DataFrame with information about change lines survival
     :rtype: (pd.DataFrame, pd.DataFrame)
+
+    TODO: replace tuple with named tuple for return value
     """
     commits_df.rename(columns={'ModelGPT3.5': 'ModelGPT3_5'}, inplace=True)
 
     repo_cache = {}
-    total_stats = {
+    total_stats = Counter({
         'n_skipped': 0,
         'n_errors': 0,
         'n_unmerged': 0,
         'lines_survived_sum': 0,
         'lines_total_sum': 0,
-    }
+    })
     augment_data = []
     lines_data = []
     all_blamed_commits_info = defaultdict(dict)
@@ -221,7 +372,8 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
 
         if survival_info is not None:
             commit_lines_data = process_commit_changed_lines(repo, project_name, gpt_commit,
-                                                             survival_info, all_blamed_commits_info[project_name])
+                                                             survival_info, all_blamed_commits_info[project_name],
+                                                             total_stats)
             lines_data.extend(commit_lines_data)
 
     if total_stats['n_skipped'] > 0:
@@ -235,14 +387,39 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
               file=sys.stderr)
 
     print(f"Created {len(repo_cache)} of GitRepo objects", file=sys.stderr)
-    print(f"Lines survival stats: {total_stats}", file=sys.stderr)
+    print("Lines survival stats:", file=sys.stderr)
     if total_stats['lines_total_sum'] > 0:
-        print(f"  {100.0*total_stats['lines_survived_sum']/total_stats['lines_total_sum']:.2f}% lines survived",
+        print("  "
+              f"{total_stats['lines_survived_sum']} / {total_stats['lines_total_sum']} = "
+              f"{100.0 * total_stats['lines_survived_sum'] / total_stats['lines_total_sum']:.2f}% lines survived; "
+              f"{total_stats['lines_total_sum'] - total_stats['lines_survived_sum']} did not",
               file=sys.stderr)
     else:
         print(f"WARNING: captured {total_stats['lines_total_sum']} changed lines "
               f"and {total_stats['lines_survived_sum']} surviving lines",
               file=sys.stderr)
+
+    # TODO: reduce code duplication
+    print("  "
+          f"orig commit metadata: {total_stats['Sha_metadata_from_blame']:6d} from blame, "
+          f"{total_stats['Sha_metadata_from_repo']:5d} from repo = "
+          f"{total_stats['Sha_metadata_from_blame'] + total_stats['Sha_metadata_from_repo']:6d} total",
+          file=sys.stderr)
+    print("  "
+          f"last commit metadata: {total_stats['commit_metadata_from_blame']:6d} from blame, "
+          f"{total_stats['commit_metadata_from_repo']:5d} from repo = "
+          f"{total_stats['commit_metadata_from_blame'] + total_stats['commit_metadata_from_repo']:6d} total",
+          file=sys.stderr)
+    print("  "
+          f"next commit metadata: {total_stats['previous_commit_metadata_from_blame']:6d} from blame, "
+          f"{total_stats['previous_commit_metadata_from_repo']:5d} from repo = "
+          f"{total_stats['previous_commit_metadata_from_blame'] + total_stats['previous_commit_metadata_from_repo']:6d} total",
+          file=sys.stderr)
+    print(" ",
+          total_stats['Sha_metadata_from_repo'] +
+          total_stats['commit_metadata_from_repo'] +
+          total_stats['previous_commit_metadata_from_repo'],
+          "from repo total")
 
     print(f"Creating dataframe with augmentation data from {len(augment_data)} records...",
           file=sys.stderr)

@@ -129,6 +129,8 @@ def _parse_blame_porcelain(blame_text):
                 'original': match.group('orig'),
                 'final': match.group('final')
             }
+            if curr_commit in commits_data:
+                curr_line['original_filename'] = commits_data[curr_commit]['filename']
         elif line.startswith('\t'):  # TAB
             # the contents of the actual line
             curr_line['line'] = line[1:]  # remove leading TAB
@@ -144,6 +146,9 @@ def _parse_blame_porcelain(blame_text):
                 # e.g. 'boundary'
                 key, value = (line, True)
             commits_data[curr_commit][key] = value
+            # add 'filename' as 'original_filename' to line info
+            if key == 'filename':
+                curr_line['original_filename'] = value
 
     return commits_data, line_data
 
