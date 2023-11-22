@@ -312,8 +312,26 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
               file=sys.stderr)
 
     print(f"Created {len(repo_cache)} of GitRepo objects", file=sys.stderr)
-    print(f"Lines survival stats: {total_stats}", file=sys.stderr)
-    print(f"  {100.0*total_stats['lines_survived_sum']/total_stats['lines_total_sum']:.2f}% lines survived",
+    print("Lines survival stats:", file=sys.stderr)
+    print("  "
+          f"{total_stats['lines_survived_sum']} / {total_stats['lines_total_sum']} = "
+          f"{100.0*total_stats['lines_survived_sum']/total_stats['lines_total_sum']:.2f}% lines survived",
+          file=sys.stderr)
+    # TODO: reduce code duplication
+    print("  "
+          f"orig commit metadata: {total_stats['Sha_metadata_from_blame']} from blame, "
+          f"{total_stats['Sha_metadata_from_repo']} from repo = ",
+          f"{total_stats['Sha_metadata_from_blame'] + total_stats['Sha_metadata_from_repo']} total",
+          file=sys.stderr)
+    print("  "
+          f"last commit metadata: {total_stats['commit_metadata_from_blame']} from blame, "
+          f"{total_stats['commit_metadata_from_repo']} from repo = ",
+          f"{total_stats['commit_metadata_from_blame'] + total_stats['commit_metadata_from_repo']} total",
+          file=sys.stderr)
+    print("  "
+          f"next commit metadata: {total_stats['previous_commit_metadata_from_blame']} from blame, "
+          f"{total_stats['previous_commit_metadata_from_repo']} from repo = ",
+          f"{total_stats['previous_commit_metadata_from_blame'] + total_stats['commit_metadata_from_repo']} total",
           file=sys.stderr)
 
     print(f"Creating dataframe with augmentation data from {len(augment_data)} records...",
