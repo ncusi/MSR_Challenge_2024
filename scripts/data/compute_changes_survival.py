@@ -315,24 +315,30 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
     print("Lines survival stats:", file=sys.stderr)
     print("  "
           f"{total_stats['lines_survived_sum']} / {total_stats['lines_total_sum']} = "
-          f"{100.0*total_stats['lines_survived_sum']/total_stats['lines_total_sum']:.2f}% lines survived",
+          f"{100.0*total_stats['lines_survived_sum']/total_stats['lines_total_sum']:.2f}% lines survived; "
+          f"{total_stats['lines_total_sum'] - total_stats['lines_survived_sum']} did not",
           file=sys.stderr)
     # TODO: reduce code duplication
     print("  "
-          f"orig commit metadata: {total_stats['Sha_metadata_from_blame']} from blame, "
-          f"{total_stats['Sha_metadata_from_repo']} from repo = ",
-          f"{total_stats['Sha_metadata_from_blame'] + total_stats['Sha_metadata_from_repo']} total",
+          f"orig commit metadata: {total_stats['Sha_metadata_from_blame']:6d} from blame, "
+          f"{total_stats['Sha_metadata_from_repo']:5d} from repo = "
+          f"{total_stats['Sha_metadata_from_blame'] + total_stats['Sha_metadata_from_repo']:6d} total",
           file=sys.stderr)
     print("  "
-          f"last commit metadata: {total_stats['commit_metadata_from_blame']} from blame, "
-          f"{total_stats['commit_metadata_from_repo']} from repo = ",
-          f"{total_stats['commit_metadata_from_blame'] + total_stats['commit_metadata_from_repo']} total",
+          f"last commit metadata: {total_stats['commit_metadata_from_blame']:6d} from blame, "
+          f"{total_stats['commit_metadata_from_repo']:5d} from repo = "
+          f"{total_stats['commit_metadata_from_blame'] + total_stats['commit_metadata_from_repo']:6d} total",
           file=sys.stderr)
     print("  "
-          f"next commit metadata: {total_stats['previous_commit_metadata_from_blame']} from blame, "
-          f"{total_stats['previous_commit_metadata_from_repo']} from repo = ",
-          f"{total_stats['previous_commit_metadata_from_blame'] + total_stats['commit_metadata_from_repo']} total",
+          f"next commit metadata: {total_stats['previous_commit_metadata_from_blame']:6d} from blame, "
+          f"{total_stats['previous_commit_metadata_from_repo']:5d} from repo = "
+          f"{total_stats['previous_commit_metadata_from_blame'] + total_stats['previous_commit_metadata_from_repo']:6d} total",
           file=sys.stderr)
+    print(" ",
+          total_stats['Sha_metadata_from_repo'] +
+          total_stats['commit_metadata_from_repo'] +
+          total_stats['previous_commit_metadata_from_repo'],
+          "from repo total")
 
     print(f"Creating dataframe with augmentation data from {len(augment_data)} records...",
           file=sys.stderr)
