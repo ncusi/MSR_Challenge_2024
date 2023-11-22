@@ -219,6 +219,11 @@ def process_commit_changed_lines(repo: GitRepo,
                         = commit_metadata['author']['timestamp']
                     change_line_info[f"{sha_key}_committer_timestamp"] \
                         = commit_metadata['committer']['timestamp']
+                    # use blamed_commits_info as cache
+                    blamed_commits_info[commit_sha] = {
+                        'author-time': commit_metadata['author']['timestamp'],
+                        'committer-time': commit_metadata['committer']['timestamp'],
+                    }
 
             lines_data.append({
                 # the same field names as used in DevGPT dataset
