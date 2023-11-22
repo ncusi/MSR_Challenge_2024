@@ -6,9 +6,16 @@ Compute survival of changed lines for each commit in the <commit_sharings_df>,
 using cloned repositories (as described by <repositories.json>) and the
 reverse blame.
 
-While at it, add some commit metadata to the dataframe.
+While at it, add some commit metadata to the dataframe.  This information
+is gathered into dataframe and saved in the <output_commit_df>.
 
-TODO: describe <output_lines_df>
+Information about the fate of each post-image changed line ("added" line in
+the unified diff of commit changes), for example in which commit it vanished
+if it did vanish, is gathered into dataframe and saved in the <output_lines_df>.
+
+See docstring for :func:`process_single_commit` to find columns added to original
+<commit_sharings_df> columns in <output_commit_df>, and docstring for
+:func:`process_commit_changed_lines` to find columns in <output_lines_df>.
 
 Example:
     python scripts/data/compute_changes_survival.py \\
@@ -45,6 +52,52 @@ class GptCommitInfo(NamedTuple):
 def process_single_commit(repo: GitRepo,
                           project_name: str, gpt_commit: str,
                           process_stats: dict) -> GptCommitInfo:
+    """Process single commit from DevGPT dataset, computing its survival info
+
+    Using reverse blame for each of lines "added" by the patch of `gpt_commit`,
+    find if some of them vanish at some point, or if they all survive to present
+    day (until HEAD).  The result of reverse blame is added to the return
+    value of this function, together with data about the commit it computed
+    or extracted.
+
+    This function returns GptCommitInfo named tuple, where first field,
+    `curr_commit_info`, contains information about the processed commit,
+    `line_survival_info` comes directly from repo.changes_survival(),
+    and `blamed_commits_data` is information about blamed commits
+    from repo.changes_survival() post-processed to be a dict with
+    commits SHA-1 identifiers as keys, and commit data as values.
+
+    The data in `curr_commit_info` has the following structure:
+    - 'Sha': SHA-1 identifier of commit from DevGPT, to be used for join
+      with the <commit_sharings_df> data
+    - 'author_timestamp': Unix timestamp of when `Sha` commit was authored,
+      should be same date as in `AuthorAt` field in DevGPT dataset
+    - 'committer_timestamp': Unix timestamp of when `Sha` commit was
+      committed to repo, should be the same date as `CommitAt` from DevGPT
+    - 'n_parents': number of `Sha` commit parents, to distinguish merge
+      and root commits
+    - 'is_merged_HEAD': boolean value denoting whether `Sha` is merged
+      into HEAD, or in other words whether HEAD codeline contains `Sha`
+    - `error`: boolean value, whether there were errors while trying to
+      compute reverse blame for the commit; if True all following fields
+      will be missing (will be N/A in the dataframe)
+    - 'change_lines_survived': number of lines in post-image that survived
+      until present day (until HEAD)
+    - 'change_lines_total': total number of lines in post-image of `Sha`
+      ("added" lines in unified diff of `Sha` commit changes)
+    - 'min_died_committer_timestamp': Unix timestamp of earliest date
+      when first line of `Sha` post-image changes vanished; missing
+      if all change lines suvived
+
+    :param GitRepo repo: local, cloned `project_name` repository
+    :param str project_name: name of the project (full name on GitHub)
+        e.g. "sqlalchemy/sqlalchemy"
+    :param str gpt_commit: commit from DevGPT dataset, for example one
+        where its commit message includes ChatGPT sharing link
+    :param dict process_stats: used to gather statistics about the process
+    :return: data about the commit, and reverse blame info
+    :rtype: GptCommitInfo
+    """
     commit_metadata = repo.get_commit_metadata(gpt_commit)
     augment_curr = {
         'Sha': gpt_commit,  # to be used for join
@@ -259,10 +312,16 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
     For each commit, compute how many of its post-image lines survived to current
     state of the project, and use it to augment per-commit data.
 
+    For each of post-image change lines ("added" lines in unified diff), gather
+    and extract information about its survival, using reverse git blame.
+
     :param pd.DataFrame commits_df: DataFrame with commits sharings from DevGPT
     :param dict repo_clone_data: information about cloned project's repositories
-    :return: DataFrame augmented with changes survival information
+    :return: tuple of DataFrame augmented with changes survival information,
+        and DataFrame with information about change lines survival
     :rtype: (pd.DataFrame, pd.DataFrame)
+
+    TODO: replace tuple with named tuple for return value
     """
     commits_df.rename(columns={'ModelGPT3.5': 'ModelGPT3_5'}, inplace=True)
 
