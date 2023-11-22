@@ -71,8 +71,8 @@ stages:
       size: 163865
     - path: scripts/data/compute_changes_survival.py
       hash: md5
-      md5: f0ae6537cdb53b8d76b7d749b8cd709e
-      size: 11608
+      md5: 73e7555e261a4a925ae8b402d7bd3ac9
+      size: 22599
     outs:
     - path: data/interim/commit_sharings_changes_survival_df.csv
       hash: md5
@@ -80,5 +80,5 @@ stages:
       size: 527243
     - path: data/interim/commit_sharings_lines_survival_df.csv
       hash: md5
-      md5: ae8dedfb0d43093cf98d9ac21d671a66
-      size: 44577496
+      md5: d5ff332d4f21363ba091e7dc442b81cf
+      size: 48269210
