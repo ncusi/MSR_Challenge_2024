@@ -70,6 +70,8 @@ def process_single_commit(repo: GitRepo, project_name: str, gpt_commit: str, pro
 
     except subprocess.CalledProcessError as err:
         tqdm.write(f"{err=}")
+        if hasattr(err, 'stderr') and err.stderr:
+            tqdm.write(f"-----\n{err.stderr}\n-----")
         augment_curr['error'] = True
         process_stats['n_errors'] += 1
         return GptCommitInfo(augment_curr)
