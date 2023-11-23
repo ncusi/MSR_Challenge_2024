@@ -1,5 +1,10 @@
 #!/usr/bin/bash
 
+# configuration
+DVCSTORE_DIR='/mnt/data/dvcstore'
+DEVGPT_DIR='/mnt/data/MSR_Challenge_2024/DevGPT-data.v9'
+
+
 # initialize virtualenv, if needed
 echo "Checking for virtualenv (venv)"
 if [ ! -e venv/bin/activate ]; then
@@ -19,7 +24,7 @@ pip install -q -r requirements.txt
 
 # configuring DVC remote
 DVC_REMOTES="$(dvc remote list)"
-if grep -q -F -e '/mnt/data/dvcstore' <<<"$DVC_REMOTES"; then
+if grep -q -F -e "$DVCSTORE_DIR" <<<"$DVC_REMOTES"; then
     echo "DVC storage looks to be configured correctly:"
     echo "    $DVC_REMOTES"
 else
@@ -28,16 +33,16 @@ else
     [core]
         remote = local
     ['remote "local"']
-        url = /mnt/data/dvcstore
+        url = $DVCSTORE_DIR
 EOF
 fi
 
 if [ ! -e 'data/external/DevGPT' ]; then
-    if [ -d '/mnt/data/MSR_Challenge_2024/DevGPT-data.v9' ]; then
-        echo "Linking '/mnt/data/MSR_Challenge_2024/DevGPT-data.v9'"
-        ln -s /mnt/data/MSR_Challenge_2024/DevGPT-data.v9 data/external/DevGPT
+    if [ -d "$DEVGPT_DIR" ]; then
+        echo "Linking '$DEVGPT_DIR'"
+        ln -s "$DEVGPT_DIR" data/external/DevGPT
     else
-        echo "Could not find '/mnt/data/MSR_Challenge_2024/DevGPT-data.v9' directory"
+        echo "Could not find '$DEVGPT_DIR' directory with DevGPT dataset"
     fi
 else
     echo "'data/external/DevGPT' already exists"
