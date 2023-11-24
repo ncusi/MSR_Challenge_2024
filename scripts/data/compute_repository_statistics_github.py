@@ -62,6 +62,7 @@ def check_repositories_statistics(repositories_info_path, dataset_directory_path
             continue
 
         results[repo_name] = {
+            'current_full_name': repo.full_name,  # might be different from `repo_name`
             'archived': repo.archived,
             'created_at': repo.created_at,
             'created_at_timestamp': int(repo.created_at.timestamp()),
