@@ -818,7 +818,7 @@ class GitRepo:
         :type start_from: str or StartLogFrom
         :return: list of authors together with their commit count,
             in the 'SPACE* <count> TAB <author>' format
-        :rtype: list[str]
+        :rtype: list[str|bytes]
         """
         if hasattr(start_from, 'value'):
             start_from = start_from.value
@@ -831,8 +831,13 @@ class GitRepo:
             '-n',  # Sort output according to the number of commits per author
             start_from,
         ]
-        process = subprocess.run(cmd, capture_output=True, check=True, encoding='utf8')
-        return process.stdout.splitlines()
+        process = subprocess.run(cmd, capture_output=True, check=True)
+        try:
+            # try to return text
+            return process.stdout.decode(GitRepo.log_encoding).splitlines()
+        except UnicodeDecodeError:
+            # if not possible, return bytes
+            return process.stdout.splitlines()
 
     def find_roots(self, start_from=StartLogFrom.CURRENT):
         """Find root commits (commits without parents), starting from `start_from`
