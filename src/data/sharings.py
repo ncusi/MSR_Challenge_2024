@@ -1,8 +1,11 @@
 """Common code related to DevGPT sharings for scripts in src/data/ directory"""
+import json
 import sys
 from os import PathLike
 from pathlib import Path
 from typing import NamedTuple
+
+from src.data.common import ERROR_OTHER
 
 
 class SharingsPaths(NamedTuple):
@@ -81,3 +84,57 @@ def find_most_recent_commit_sharings(dataset_directory_path, verbose=True):
     :rtype: Path
     """
     return find_most_recent_sharings_files(dataset_directory_path, verbose)['commit']
+
+
+def sharings_repo_list(sharings_path):
+    """List all different 'RepoName' that can be found in DevGPT sharings
+
+    :param PathLike sharings_path: path to sharings file from DevGPT dataset,
+        for example 'data/DevGPT/snapshot_20230831/20230831_063412_commit_sharings.json'
+    :return: list of unique repositories ('RepoName'), for example
+        ['sqlalchemy/sqlalchemy',...]
+    :rtype: list[str]
+    """
+    with open(sharings_path) as sharings_file:
+        sharings = json.load(sharings_file)
+
+    if 'Sources' not in sharings:
+        print(f"ERROR: unexpected format/structure of '{sharings_path}'")
+        sys.exit(ERROR_OTHER)
+
+    sharings_data = sharings['Sources']
+    return list(set([source['RepoName']
+                    for source in sharings_data]))
+
+
+def recent_sharings_paths_and_repos(dataset_path, verbose=True):
+    """Find repos mentioned in sharings from most recent DevGPT snapshot
+
+    This function considers only commit, pr, and issue sharings.
+    The result is mapping from sharings type to data about most recent
+    sharing of that type (sharing of that type from most recent snapshot
+    from DevGPT dataset).
+
+    The data about sharings consist of the following fields:
+
+    - 'path': path to sharings file,
+    - 'repos': list of unique 'RepoName's in sharings file.
+
+    :param Path dataset_path: path to directory with DevGPT dataset
+    :param bool verbose: whether to print debugging-like information,
+        `true` by default
+    :return: data about most recent sharings of selected types
+    :rtype: dict
+    """
+    recent_sharings = find_most_recent_sharings_files(dataset_path, verbose)
+
+    result = {}
+    for sharings_type, sharings_path in recent_sharings.items():
+        if sharings_type in {'commit', 'pr', 'issue'}:
+            sharings_repos = sharings_repo_list(sharings_path)
+            result[sharings_type] = {
+                'path': sharings_path,
+                'repos': sharings_repos,
+            }
+
+    return result

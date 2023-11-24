@@ -56,3 +56,29 @@ stages:
     outs:
       - data/interim/commit_sharings_changes_survival_df.csv
       - data/interim/commit_sharings_lines_survival_df.csv
+
+  repo_stats_git:
+    desc: 'Repository stats from git for all cloned project repos'
+    cmd: >-
+      python scripts/data/compute_repository_statistics_git.py
+      data/external/DevGPT/ data/repositories_download_status.json
+      data/interim/repository_statistics_git.json
+    deps:
+      - scripts/data/compute_repository_statistics_git.py
+      - data/external/DevGPT/
+      - data/repositories_download_status.json
+    outs:
+      - data/interim/repository_statistics_git.json
+
+  repo_stats_github:
+    desc: 'Repository info from GitHub for all cloned project repos'
+    cmd: >-
+      python scripts/data/compute_repository_statistics_github.py
+      data/external/DevGPT/ data/repositories_download_status.json
+      data/interim/repository_statistics_github.json
+    deps:
+      - scripts/data/compute_repository_statistics_github.py
+      - data/external/DevGPT/
+      - data/repositories_download_status.json
+    outs:
+      - data/interim/repository_statistics_github.json

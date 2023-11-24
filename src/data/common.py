@@ -5,6 +5,7 @@ from src.utils.files import load_json_with_checks
 
 # constants
 ERROR_ARGS = 1
+ERROR_OTHER = 2
 
 
 def load_repositories_json(repositories_info_path: Path) -> dict:
