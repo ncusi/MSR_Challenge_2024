@@ -484,6 +484,19 @@ class GitClassMethodsTestCase(unittest.TestCase):
                 except PermissionError:
                     pass
 
+    def test_clone_nonexistent_repository(self):
+        """Test for GitRepo.clone_repository() gracefully handling errors"""
+        # hopefully nobody will register repository with that name
+        with self.subTest("non existent repo at GitHub"):
+            repo_url = 'https://github.com/orgdoesnotexist/repodoesnotexist'
+            repo = GitRepo.clone_repository(repo_url)
+            self.assertIsNone(repo, f"repo for {repo_url} is None")
+
+        with self.subTest("not a git hosting site, non existent page"):
+            repo_url = 'https://example.com/git/repo.git'
+            repo = GitRepo.clone_repository(repo_url)
+            self.assertIsNone(repo, f"repo for {repo_url} is None")
+
 
 if __name__ == '__main__':
     unittest.main()
