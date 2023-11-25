@@ -103,11 +103,12 @@ def _parse_commit_text(commit_text, with_parents_line=True, indented_body=True):
     return commit_data
 
 
-# used by _parse_blame_porcelain() function
-_blame_pattern = re.compile(r'^(?P<sha1>[0-9a-f]{40}) (?P<orig>[0-9]+) (?P<final>[0-9]+)')
-
-
 def _parse_blame_porcelain(blame_text):
+    # trick from https://stackoverflow.com/a/279597/
+    if not hasattr(_parse_blame_porcelain, 'regexp'):
+        # runs only once
+        _parse_blame_porcelain.regexp = re.compile(r'^(?P<sha1>[0-9a-f]{40}) (?P<orig>[0-9]+) (?P<final>[0-9]+)')
+
     # https://git-scm.com/docs/git-blame#_the_porcelain_format
     blame_lines = blame_text.splitlines()
     if not blame_lines:
@@ -123,7 +124,7 @@ def _parse_blame_porcelain(blame_text):
         if not line:  # empty line, shouldn't happen
             continue
 
-        if match := _blame_pattern.match(line):
+        if match := _parse_blame_porcelain.regexp.match(line):
             curr_commit = match.group('sha1')
             curr_line = {
                 'commit': curr_commit,

@@ -202,7 +202,6 @@ class GitTestCase(unittest.TestCase):
             }
             self.assertEqual(actual, expected, "changed lines for post-image for changed files match (v1)")
 
-
     def test_file_contents(self):
         """Test that GitRepo.file_contents returns file contents as text"""
         expected = 'example\n2\n3\n4\n5\n'
