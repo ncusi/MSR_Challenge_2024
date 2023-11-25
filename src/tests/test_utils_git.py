@@ -10,7 +10,8 @@ from pathlib import Path
 from unidiff import PatchSet
 
 from src.tests import slow_test
-from src.utils.git import GitRepo, DiffSide, changes_survival_perc
+from src.utils.git import (GitRepo, DiffSide, AuthorStat,
+                           changes_survival_perc, parse_shortlog_count, select_core_authors)
 
 
 class GitTestCase(unittest.TestCase):
@@ -201,7 +202,6 @@ class GitTestCase(unittest.TestCase):
                 'subdir/subfile': [(1,1)],  # whole file added in v2 with 1 incomplete line
             }
             self.assertEqual(actual, expected, "changed lines for post-image for changed files match (v1)")
-
 
     def test_file_contents(self):
         """Test that GitRepo.file_contents returns file contents as text"""
@@ -398,11 +398,45 @@ class GitTestCase(unittest.TestCase):
             '2\tA U Thor',  # author of v1, v1.5
             '1\tJoe Random',  # author of v2
         ]
+        authors_shortlog = self.repo.list_authors_shortlog()
         actual_simplified = [
             info.strip()
-            for info in self.repo.list_authors_shortlog()
+            for info in authors_shortlog
         ]
         self.assertCountEqual(actual_simplified, expected, "list of authors matches")
+
+        expected = [
+            AuthorStat(author='A U Thor', count=2),
+            AuthorStat(author='Joe Random', count=1)
+        ]
+        actual = parse_shortlog_count(authors_shortlog)
+        self.assertCountEqual(actual, expected, "parsed authors counts matches")
+
+    def test_select_core_authors(self):
+        """Test select_core_authors() function"""
+        input = [
+            AuthorStat('first', 10),  # 10
+            AuthorStat('second', 2),  # 12
+            AuthorStat('third', 2),   # 14
+        ]
+        core, perc = select_core_authors(input, perc=0.5)  # 0.5*14 = 7
+        self.assertEqual(len(core), 1, "there is 1 author in 50% core")
+        self.assertGreaterEqual(perc, 0.5, 'selected authors add up to more than 0.5 of commits')
+        self.assertNotEqual(core[-1].count, input[len(core)+1].count,
+                            "no tie / draw with the next author after last selected")
+
+        core, perc = select_core_authors(input, perc=0.8)  # 0.8*14 = 11.2
+        self.assertEqual(len(core), 3, "there is 3 authors in 80% core (tie breaking)")
+        self.assertGreaterEqual(perc, 0.8, 'selected authors add up to more than 0.8 of commits')
+
+    def test_list_core_authors(self):
+        """Test GitRepo.list_core_authors() method"""
+        expected = [
+            AuthorStat('A U Thor', 2),
+        ]
+        core, perc = self.repo.list_core_authors(perc=0.5)
+        self.assertGreaterEqual(perc, 0.5, 'core authors add up to more than 0.5 of commits')
+        self.assertEqual(core, expected, 'core authors match expectation for repo')
 
     def test_find_roots(self):
         """Test GitRepo.find_roots() method"""

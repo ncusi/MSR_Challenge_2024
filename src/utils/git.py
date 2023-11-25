@@ -22,9 +22,10 @@ import re
 import subprocess
 from contextlib import contextmanager
 from enum import Enum
+from operator import attrgetter
 from os import PathLike
 from pathlib import Path
-from typing import overload, Literal
+from typing import overload, Literal, NamedTuple, Tuple
 
 from unidiff import PatchSet
 
@@ -42,6 +43,12 @@ class StartLogFrom(Enum):
     CURRENT = 'HEAD'
     HEAD = 'HEAD'  # alias
     ALL = '--all'
+
+
+class AuthorStat(NamedTuple):
+    """Parsed result of 'git shortlog -c -s'"""
+    author: str  #: author name (commit authorship info)
+    count: int = 0  #: number of commits per author
 
 
 def _parse_authorship_info(authorship_line, field_name='author'):
@@ -103,11 +110,12 @@ def _parse_commit_text(commit_text, with_parents_line=True, indented_body=True):
     return commit_data
 
 
-# used by _parse_blame_porcelain() function
-_blame_pattern = re.compile(r'^(?P<sha1>[0-9a-f]{40}) (?P<orig>[0-9]+) (?P<final>[0-9]+)')
-
-
 def _parse_blame_porcelain(blame_text):
+    # trick from https://stackoverflow.com/a/279597/
+    if not hasattr(_parse_blame_porcelain, 'regexp'):
+        # runs only once
+        _parse_blame_porcelain.regexp = re.compile(r'^(?P<sha1>[0-9a-f]{40}) (?P<orig>[0-9]+) (?P<final>[0-9]+)')
+
     # https://git-scm.com/docs/git-blame#_the_porcelain_format
     blame_lines = blame_text.splitlines()
     if not blame_lines:
@@ -123,7 +131,7 @@ def _parse_blame_porcelain(blame_text):
         if not line:  # empty line, shouldn't happen
             continue
 
-        if match := _blame_pattern.match(line):
+        if match := _parse_blame_porcelain.regexp.match(line):
             curr_commit = match.group('sha1')
             curr_line = {
                 'commit': curr_commit,
@@ -152,6 +160,76 @@ def _parse_blame_porcelain(blame_text):
                 curr_line['original_filename'] = value
 
     return commits_data, line_data
+
+
+def parse_shortlog_count(shortlog_lines: list[str | bytes]) -> list[AuthorStat]:
+    """Parse the result of GitRepo.list_authors_shortlog() method
+
+    :param shortlog_lines: result of list_authors_shortlog()
+    :type shortlog_lines: str or bytes
+    :return: list of parsed statistics, number of commits per author
+    :rtype: list[AuthorStat]
+    """
+    result = []
+    for line in shortlog_lines:
+        count, author = line.split('\t' if isinstance(line, str) else b'\t', maxsplit=1)
+        count = int(count.strip())
+        result.append(AuthorStat(author, count))
+
+    return result
+
+
+def select_core_authors(authors_stats: list[AuthorStat],
+                        perc: float = 0.8) -> Tuple[list[AuthorStat], float]:
+    """Select sorted list of core authors from `authors_list`
+
+    Core authors are defined (like in World of Code) as those authors with
+    the greatest contribution count whose contribution sum up to more than
+    given `perc` fraction of contributions from all authors.  Usually
+    number of contributions comes from 'git shortlog', and counts commits.
+
+    This function returns a tuple.  First element is list of `AuthorStat`
+    named tuples, sorted by `count` field in decreasing order, so that their
+    contribution is minimal that covers `perc` fraction of all commits.
+    If there is tie at the last element, all tied authors are included.
+    Second element is actual fraction of all commits that selected authors'
+    contributions covers.
+
+    We have len(result[0]) <= len(authors_stats), and perc <= result[1].
+
+    :param authors_stats: all authors and their contribution statistics,
+        for example result of feeding the result of list_authors_shortlog()
+        method fed to parse_shortlog_count() function
+    :type authors_stats: list[AuthorStat]
+    :param float perc: fraction threshold for considering author a core author,
+        assumed to be 0.0 <= `perc` <= 1.0 (not checked!)
+    :return: list of core authors, and cumulative fraction of contributions
+        of returned authors
+    :rtype: list[AuthorStat], float
+    """
+    authors_stats.sort(key=attrgetter('count'), reverse=True)
+    total_commits = sum([auth.count
+                         for auth in authors_stats])
+
+    result = []
+    idx = 0
+    running_total = 0
+    for idx, auth in enumerate(authors_stats):
+        result.append(auth)
+        running_total += auth.count
+        if running_total > perc*total_commits:
+            break
+
+    # handle ex aequo situation (draw / tie)
+    last_count = authors_stats[idx].count
+    for auth in authors_stats[idx+1:]:
+        if auth.count == last_count:
+            running_total += auth.count
+            result.append(auth)
+        else:
+            break
+
+    return result, running_total/total_commits
 
 
 def changes_survival_perc(lines_survival):
@@ -844,7 +922,7 @@ class GitRepo:
         return int(process.stdout)
 
     def list_authors_shortlog(self, start_from=StartLogFrom.ALL):
-        """List all authors using git-shorlog
+        """List all authors using git-shortlog
 
         Summarizes the history of the project by providing list of authors
         together with their commit counts.  Uses `git shortlog --summary`
@@ -874,6 +952,26 @@ class GitRepo:
         except UnicodeDecodeError:
             # if not possible, return bytes
             return process.stdout.splitlines()
+
+    def list_core_authors(self, start_from=StartLogFrom.ALL, perc=0.8):
+        """List core authors using git-shortlog, and their fraction of commits
+
+        Get list of authors contributions via 'git-shortlog' with
+        `list_authors_shortlog`, parse it with `parse_shortlog_count`,
+        and select core authors from this list with `select_core_authors`.
+
+        :param start_from: where to start from to follow 'parent' links
+        :type start_from: str or StartLogFrom
+        :param float perc: fraction threshold for considering author a core author,
+            assumed to be 0.0 <= `perc` <= 1.0 (not checked!)
+        :return: list of core authors, and cumulative fraction of contributions
+            of returned authors
+        :rtype: (list[AuthorStat], float)
+        """
+        return select_core_authors(
+            parse_shortlog_count(self.list_authors_shortlog(start_from)),
+            perc
+        )
 
     def find_roots(self, start_from=StartLogFrom.CURRENT):
         """Find root commits (commits without parents), starting from `start_from`
