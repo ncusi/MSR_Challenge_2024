@@ -429,6 +429,15 @@ class GitTestCase(unittest.TestCase):
         self.assertEqual(len(core), 3, "there is 3 authors in 80% core (tie breaking)")
         self.assertGreaterEqual(perc, 0.8, 'selected authors add up to more than 0.8 of commits')
 
+    def test_list_core_authors(self):
+        """Test GitRepo.list_core_authors() method"""
+        expected = [
+            AuthorStat('A U Thor', 2),
+        ]
+        core, perc = self.repo.list_core_authors(perc=0.5)
+        self.assertGreaterEqual(perc, 0.5, 'core authors add up to more than 0.5 of commits')
+        self.assertEqual(core, expected, 'core authors match expectation for repo')
+
     def test_find_roots(self):
         """Test GitRepo.find_roots() method"""
         roots_list = self.repo.find_roots()

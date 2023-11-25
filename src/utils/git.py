@@ -203,7 +203,8 @@ def select_core_authors(authors_stats: list[AuthorStat],
     :type authors_stats: list[AuthorStat]
     :param float perc: fraction threshold for considering author a core author,
         assumed to be 0.0 <= `perc` <= 1.0 (not checked!)
-    :return: cumulative fraction of contributions of returned authors
+    :return: list of core authors, and cumulative fraction of contributions
+        of returned authors
     :rtype: list[AuthorStat], float
     """
     authors_stats.sort(key=attrgetter('count'), reverse=True)
@@ -921,7 +922,7 @@ class GitRepo:
         return int(process.stdout)
 
     def list_authors_shortlog(self, start_from=StartLogFrom.ALL):
-        """List all authors using git-shorlog
+        """List all authors using git-shortlog
 
         Summarizes the history of the project by providing list of authors
         together with their commit counts.  Uses `git shortlog --summary`
@@ -951,6 +952,26 @@ class GitRepo:
         except UnicodeDecodeError:
             # if not possible, return bytes
             return process.stdout.splitlines()
+
+    def list_core_authors(self, start_from=StartLogFrom.ALL, perc=0.8):
+        """List core authors using git-shortlog, and their fraction of commits
+
+        Get list of authors contributions via 'git-shortlog' with
+        `list_authors_shortlog`, parse it with `parse_shortlog_count`,
+        and select core authors from this list with `select_core_authors`.
+
+        :param start_from: where to start from to follow 'parent' links
+        :type start_from: str or StartLogFrom
+        :param float perc: fraction threshold for considering author a core author,
+            assumed to be 0.0 <= `perc` <= 1.0 (not checked!)
+        :return: list of core authors, and cumulative fraction of contributions
+            of returned authors
+        :rtype: (list[AuthorStat], float)
+        """
+        return select_core_authors(
+            parse_shortlog_count(self.list_authors_shortlog(start_from)),
+            perc
+        )
 
     def find_roots(self, start_from=StartLogFrom.CURRENT):
         """Find root commits (commits without parents), starting from `start_from`
