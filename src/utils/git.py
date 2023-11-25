@@ -309,7 +309,16 @@ class GitRepo:
         if directory is not None:
             args.append(str(directory))
 
-        result = subprocess.run(args, capture_output=True)
+        # https://serverfault.com/questions/544156/git-clone-fail-instead-of-prompting-for-credentials
+        env = {
+            'GIT_TERMINAL_PROMPT': '0',
+            'GIT_SSH_COMMAND': 'ssh -oBatchMode=yes',
+            'GIT_ASKPASS': 'echo',
+            'SSH_ASKPASS': 'echo',
+            'GCM_INTERACTIVE': 'never',
+        }
+
+        result = subprocess.run(args, capture_output=True, env=env)
 
         # we are interested only in the directory where the repository was cloned into
         # that's why we are using GitRepo.path_encoding (instead of 'utf8', for example)
