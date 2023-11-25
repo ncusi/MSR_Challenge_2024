@@ -19,7 +19,7 @@ from tqdm import tqdm
 from src.data.sharings import recent_sharings_paths_and_repos
 from src.utils.files import load_json_with_checks
 from src.utils.functools import timed
-from src.utils.git import GitRepo
+from src.utils.git import GitRepo, select_core_authors, parse_shortlog_count
 
 # constants
 ERROR_ARGS = 1
@@ -92,7 +92,11 @@ def check_repositories_statistics(repositories_info_path, dataset_directory_path
             continue
 
         commit_number_first_parent = repo.count_commits(first_parent=True)
-        author_number = len(repo.list_authors_shortlog())
+        authors_list = repo.list_authors_shortlog()
+        author_number = len(authors_list)
+        core_authors_list, core_perc = select_core_authors(
+            parse_shortlog_count(authors_list), perc=0.8)
+        core_author_lumber = len(core_authors_list)
         files_number = len(repo.list_files())
         root_commits = repo.find_roots()
         HEAD_commit_timestamp = repo.get_commit_metadata('HEAD')['committer']['timestamp']
@@ -103,6 +107,8 @@ def check_repositories_statistics(repositories_info_path, dataset_directory_path
 
         results[repo_name] = {
             'author_number': author_number,
+            'core_author_number': core_author_lumber,
+            'core_authors_commits_perc': core_perc,
             'commit_number': commit_number,
             'commit_number_first_parent': commit_number_first_parent,
             'files_number': files_number,
