@@ -97,13 +97,13 @@ stages:
       size: 163865
     - path: scripts/data/compute_repository_statistics_git.py
       hash: md5
-      md5: 799881eeed99375009c83043f28ae8aa
-      size: 6211
+      md5: 3a1ab9002d42ab9f1809764e8c4c1be1
+      size: 6566
     outs:
     - path: data/interim/repository_statistics_git.json
       hash: md5
-      md5: c38f83752eacfe2bc650071ccbe5514f
-      size: 251337
+      md5: 0d3e2b2d3a38398c8cdd17d5de75b30e
+      size: 303905
   repo_stats_github:
     cmd: python scripts/data/compute_repository_statistics_github.py data/external/DevGPT/
       data/repositories_download_status.json data/interim/repository_statistics_github.json
