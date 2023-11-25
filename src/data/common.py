@@ -2,6 +2,7 @@
 from pathlib import Path
 
 from src.utils.files import load_json_with_checks
+from src.utils.git import GitRepo
 
 # constants
 ERROR_ARGS = 1
@@ -60,3 +61,44 @@ def reponame_to_repo_path(repo_clone_data, repo_name):
         return None
 
     return Path(repo_clone_data[project_dir]['repository_path'])
+
+
+class DownloadedRepositories:
+    """Helper class, to make it easier to operate on cloned repositories
+
+    With object of this class, instanced with path to <repositories.json> file,
+    you can easily create GitRepo objects based on 'RepoName' field from the
+    DevGPT dataset.
+
+    Example:
+        >>> from src.data.common import DownloadedRepositories
+        >>> from pathlib import Path
+        >>> all_repos = DownloadedRepositories(Path('data/repositories_download_status.json'))
+        >>> the_repo = all_repos.repo('sqlalchemy/sqlalchemy')
+        >>> curr_diff = the_repo.unidiff('HEAD^^^^^')
+    """
+    def __init__(self, repositories_info_path: Path = Path('data/repositories_download_status.json')):
+        """Create helper object, by providing it with path to <repositories.json>
+
+        The `repositories_info_path` should point to JSON file with information
+        about where one can find repositories cloned by the download_repositories.py
+        script (the "clone_repos" stage in dvc.yaml).
+
+        :param Path repositories_info_path: path to <repositories.json> file
+        """
+        self.repositories_info_path = repositories_info_path
+        self.repo_clone_data = load_repositories_json(repositories_info_path)
+
+    def repo(self, repo_name: str) -> GitRepo:
+        """Create GitRepo object for cloned 'RepoName' project
+
+        NOTE: currently does not handle gracefully case where project / repository
+        could not be cloned for some reason, but is still present in the
+        <repositories.json> file.
+
+        :param str repo_name: full name of GitHub repository, present as
+            'RepoName' field in DevGPT dataset
+        :return: repository obecjt to perform operations on
+        :rtype: GitRepo
+        """
+        return GitRepo(reponame_to_repo_path(self.repo_clone_data, repo_name))
