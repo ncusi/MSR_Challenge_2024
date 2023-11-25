@@ -11,7 +11,7 @@ from unidiff import PatchSet
 
 from src.tests import slow_test
 from src.utils.git import (GitRepo, DiffSide, AuthorStat,
-                           changes_survival_perc, parse_shortlog_count)
+                           changes_survival_perc, parse_shortlog_count, select_core_authors)
 
 
 class GitTestCase(unittest.TestCase):
@@ -411,6 +411,23 @@ class GitTestCase(unittest.TestCase):
         ]
         actual = parse_shortlog_count(authors_shortlog)
         self.assertCountEqual(actual, expected, "parsed authors counts matches")
+
+    def test_select_core_authors(self):
+        """Test select_core_authors() function"""
+        input = [
+            AuthorStat('first', 10),  # 10
+            AuthorStat('second', 2),  # 12
+            AuthorStat('third', 2),   # 14
+        ]
+        core, perc = select_core_authors(input, perc=0.5)  # 0.5*14 = 7
+        self.assertEqual(len(core), 1, "there is 1 author in 50% core")
+        self.assertGreaterEqual(perc, 0.5, 'selected authors add up to more than 0.5 of commits')
+        self.assertNotEqual(core[-1].count, input[len(core)+1].count,
+                            "no tie / draw with the next author after last selected")
+
+        core, perc = select_core_authors(input, perc=0.8)  # 0.8*14 = 11.2
+        self.assertEqual(len(core), 3, "there is 3 authors in 80% core (tie breaking)")
+        self.assertGreaterEqual(perc, 0.8, 'selected authors add up to more than 0.8 of commits')
 
     def test_find_roots(self):
         """Test GitRepo.find_roots() method"""

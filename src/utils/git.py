@@ -22,9 +22,10 @@ import re
 import subprocess
 from contextlib import contextmanager
 from enum import Enum
+from operator import attrgetter
 from os import PathLike
 from pathlib import Path
-from typing import overload, Literal, NamedTuple
+from typing import overload, Literal, NamedTuple, Tuple
 
 from unidiff import PatchSet
 
@@ -176,6 +177,58 @@ def parse_shortlog_count(shortlog_lines: list[str | bytes]) -> list[AuthorStat]:
         result.append(AuthorStat(author, count))
 
     return result
+
+
+def select_core_authors(authors_stats: list[AuthorStat],
+                        perc: float = 0.8) -> Tuple[list[AuthorStat], float]:
+    """Select sorted list of core authors from `authors_list`
+
+    Core authors are defined (like in World of Code) as those authors with
+    the greatest contribution count whose contribution sum up to more than
+    given `perc` fraction of contributions from all authors.  Usually
+    number of contributions comes from 'git shortlog', and counts commits.
+
+    This function returns a tuple.  First element is list of `AuthorStat`
+    named tuples, sorted by `count` field in decreasing order, so that their
+    contribution is minimal that covers `perc` fraction of all commits.
+    If there is tie at the last element, all tied authors are included.
+    Second element is actual fraction of all commits that selected authors'
+    contributions covers.
+
+    We have len(result[0]) <= len(authors_stats), and perc <= result[1].
+
+    :param authors_stats: all authors and their contribution statistics,
+        for example result of feeding the result of list_authors_shortlog()
+        method fed to parse_shortlog_count() function
+    :type authors_stats: list[AuthorStat]
+    :param float perc: fraction threshold for considering author a core author,
+        assumed to be 0.0 <= `perc` <= 1.0 (not checked!)
+    :return: cumulative fraction of contributions of returned authors
+    :rtype: list[AuthorStat], float
+    """
+    authors_stats.sort(key=attrgetter('count'), reverse=True)
+    total_commits = sum([auth.count
+                         for auth in authors_stats])
+
+    result = []
+    idx = 0
+    running_total = 0
+    for idx, auth in enumerate(authors_stats):
+        result.append(auth)
+        running_total += auth.count
+        if running_total > perc*total_commits:
+            break
+
+    # handle ex aequo situation (draw / tie)
+    last_count = authors_stats[idx].count
+    for auth in authors_stats[idx+1:]:
+        if auth.count == last_count:
+            running_total += auth.count
+            result.append(auth)
+        else:
+            break
+
+    return result, running_total/total_commits
 
 
 def changes_survival_perc(lines_survival):
