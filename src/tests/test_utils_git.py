@@ -446,6 +446,15 @@ class GitTestCase(unittest.TestCase):
         v1_oid = self.repo.to_oid("v1")
         self.assertEqual(roots_list[0], v1_oid, "root commit is v1")
 
+    def test_get_config(self):
+        """Test GitRepo.get_config() method"""
+        expected = 'A U Thor'  # set up in setUpClass() class method
+        actual = self.repo.get_config('user.name')
+        self.assertEqual(actual, expected, "got expected value for 'user.name'")
+
+        actual = self.repo.get_config('not-exists')
+        self.assertIsNone(actual, "returns `None` for invalid variable name")
+
 
 class GitClassMethodsTestCase(unittest.TestCase):
     def test_clone_repository(self):

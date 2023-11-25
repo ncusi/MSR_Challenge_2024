@@ -994,5 +994,38 @@ class GitRepo:
         process = subprocess.run(cmd, capture_output=True, check=True, text=True)
         return process.stdout.splitlines()
 
+    def get_config(self, name, value_type=None):
+        """Query specific git config option
+
+        If there is no Git configuration variable named `name`,
+        then it returns None.
+
+        :param str name: name of configuration option, for example
+            'remote.origin.url' or 'user.name'
+        :param value_type: name of git type to canonicalize outgoing value,
+            see https://git-scm.com/docs/git-config#Documentation/git-config.txt---typelttypegt
+            optional
+        :type value_type: Literal['bool', 'int', 'bool-or-int', 'path', 'expiry-date', 'color'] or None
+        :return: value of requested git configuration variable
+        :rtype: str or None
+        """
+        cmd = [
+            'git', '-C', self.repo,
+            'config', str(name)
+        ]
+        if value_type is not None:
+            cmd.append(f"--type={value_type}")
+
+        try:
+            process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+            return process.stdout.strip()
+        except subprocess.CalledProcessError as err:
+            # This command will fail with non-zero status upon error. Some exit codes are:
+            # - The section or key is invalid (ret=1),
+            # - ...
+            if err.returncode == 1:
+                return None
+            else:
+                raise err
 
 # end of file utils/git.py
