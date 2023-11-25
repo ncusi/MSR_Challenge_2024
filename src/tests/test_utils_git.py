@@ -10,7 +10,8 @@ from pathlib import Path
 from unidiff import PatchSet
 
 from src.tests import slow_test
-from src.utils.git import GitRepo, DiffSide, changes_survival_perc
+from src.utils.git import (GitRepo, DiffSide, AuthorStat,
+                           changes_survival_perc, parse_shortlog_count)
 
 
 class GitTestCase(unittest.TestCase):
@@ -397,11 +398,19 @@ class GitTestCase(unittest.TestCase):
             '2\tA U Thor',  # author of v1, v1.5
             '1\tJoe Random',  # author of v2
         ]
+        authors_shortlog = self.repo.list_authors_shortlog()
         actual_simplified = [
             info.strip()
-            for info in self.repo.list_authors_shortlog()
+            for info in authors_shortlog
         ]
         self.assertCountEqual(actual_simplified, expected, "list of authors matches")
+
+        expected = [
+            AuthorStat(author='A U Thor', count=2),
+            AuthorStat(author='Joe Random', count=1)
+        ]
+        actual = parse_shortlog_count(authors_shortlog)
+        self.assertCountEqual(actual, expected, "parsed authors counts matches")
 
     def test_find_roots(self):
         """Test GitRepo.find_roots() method"""

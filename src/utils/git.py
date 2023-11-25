@@ -24,7 +24,7 @@ from contextlib import contextmanager
 from enum import Enum
 from os import PathLike
 from pathlib import Path
-from typing import overload, Literal
+from typing import overload, Literal, NamedTuple
 
 from unidiff import PatchSet
 
@@ -42,6 +42,12 @@ class StartLogFrom(Enum):
     CURRENT = 'HEAD'
     HEAD = 'HEAD'  # alias
     ALL = '--all'
+
+
+class AuthorStat(NamedTuple):
+    """Parsed result of 'git shortlog -c -s'"""
+    author: str  #: author name (commit authorship info)
+    count: int = 0  #: number of commits per author
 
 
 def _parse_authorship_info(authorship_line, field_name='author'):
@@ -153,6 +159,23 @@ def _parse_blame_porcelain(blame_text):
                 curr_line['original_filename'] = value
 
     return commits_data, line_data
+
+
+def parse_shortlog_count(shortlog_lines: list[str | bytes]) -> list[AuthorStat]:
+    """Parse the result of GitRepo.list_authors_shortlog() method
+
+    :param shortlog_lines: result of list_authors_shortlog()
+    :type shortlog_lines: str or bytes
+    :return: list of parsed statistics, number of commits per author
+    :rtype: list[AuthorStat]
+    """
+    result = []
+    for line in shortlog_lines:
+        count, author = line.split('\t', maxsplit=1)
+        count = int(count.strip())
+        result.append(AuthorStat(author, count))
+
+    return result
 
 
 def changes_survival_perc(lines_survival):
