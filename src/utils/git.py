@@ -24,6 +24,7 @@ from contextlib import contextmanager
 from enum import Enum
 from os import PathLike
 from pathlib import Path
+from typing import overload, Literal
 
 from unidiff import PatchSet
 
@@ -398,14 +399,46 @@ class GitRepo:
 
         return result
 
-    def unidiff(self, commit='HEAD', prev=None):
+    @overload
+    def unidiff(self, commit: str = ..., prev: str|None = ..., wrap: Literal[True] = ...) -> PatchSet:
+        ...
+
+    @overload
+    def unidiff(self, commit: str = ..., prev: str|None = ..., *, wrap: Literal[False]) -> str:
+        ...
+
+    @overload
+    def unidiff(self, commit: str = ..., prev: str | None = ..., wrap: bool = ...) -> str|PatchSet:
+        ...
+
+    def unidiff(self, commit='HEAD', prev=None, wrap=True):
+        """Return unified diff between `commit` and `prev`
+
+        If `prev` is None (which is the default), return diff between the
+        `commit` and its first parent, or between the `commit` and the empty
+        tree if `commit` does not have any parents (if it is a root commit).
+
+        If `wrap` is True (which is the default), wrap the result in
+        unidiff.PatchSet to make it easier to extract information from
+        the diff.  Otherwise, return diff as plain text.
+
+        :param str commit: later (second) of two commits to compare,
+            defaults to 'HEAD', that is the current commit
+        :param prev: earlier (first) of two commits to compare,
+            defaults to None, which means comparing to parent of `commit`
+        :type prev: str or None
+        :param bool wrap: whether to wrap the result in PatchSet
+        :return: the changes between two arbitrary commits,
+            `prev` and `commit`
+        :rtype: str or PatchSet
+        """
         if prev is None:
             try:
                 # NOTE: this means first-parent changes for merge commits
-                return self.unidiff(commit=commit, prev=commit + '^')
+                return self.unidiff(commit=commit, prev=commit + '^', wrap=wrap)
             except subprocess.CalledProcessError:
                 # commit^ does not exist for a root commits (for first commits)
-                return self.unidiff(commit=commit, prev=self.empty_tree_sha1)
+                return self.unidiff(commit=commit, prev=self.empty_tree_sha1, wrap=wrap)
 
         cmd = [
             'git', '-C', self.repo,
@@ -416,7 +449,10 @@ class GitRepo:
                                  capture_output=True, check=True,
                                  encoding=self.default_file_encoding)
 
-        return PatchSet(process.stdout)
+        if wrap:
+            return PatchSet(process.stdout)
+        else:
+            return process.stdout
 
     def changed_lines_extents(self, commit='HEAD', prev=None, side=DiffSide.POST):
         # TODO: implement also for DiffSide.PRE
