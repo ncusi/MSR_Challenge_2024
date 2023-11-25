@@ -7,6 +7,8 @@ import sys
 
 from pathlib import Path
 
+from unidiff import PatchSet
+
 from src.tests import slow_test
 from src.utils.git import GitRepo, DiffSide, changes_survival_perc
 
@@ -172,6 +174,15 @@ class GitTestCase(unittest.TestCase):
                 for line in patch[-1][0] if line.is_added
             }, expected_dst, "post-image on last file matches"
         )
+
+    def test_unidiff_wrap(self):
+        """Test handling of `wrap` parameter in GitRepo.unidiff"""
+        self.assertIsInstance(self.repo.unidiff(), PatchSet,
+                              "return PatchSet by default")
+        self.assertIsInstance(self.repo.unidiff(wrap=True), PatchSet,
+                              "with wrap=True return PatchSet")
+        self.assertIsInstance(self.repo.unidiff(wrap=False), str,
+                              "with wrap=False return str")
 
     def test_changed_lines_extents(self):
         with self.subTest("for HEAD (last commit)"):
