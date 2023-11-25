@@ -57,6 +57,10 @@ def download_repository(repository, repositories_path, verbose=True):
         return None
     try:
         repo = GitRepo.clone_repository(repository_url, repository_dir)
+        if repo is None:
+            print(f"Could not clone {repository_name} at {repository_url}")
+            return None
+
         return {
             'project': repository_name,
             'repository': repository,
