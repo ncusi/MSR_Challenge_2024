@@ -400,11 +400,15 @@ class GitRepo:
         return result
 
     @overload
-    def unidiff(self, commit: str = 'HEAD', prev: str|None = None, wrap: Literal[True] = True) -> PatchSet:
+    def unidiff(self, commit: str = ..., prev: str|None = ..., wrap: Literal[True] = ...) -> PatchSet:
         ...
 
     @overload
-    def unidiff(self, commit: str = 'HEAD', prev: str|None = None, wrap: Literal[False] = True) -> str:
+    def unidiff(self, commit: str = ..., prev: str|None = ..., *, wrap: Literal[False]) -> str:
+        ...
+
+    @overload
+    def unidiff(self, commit: str = ..., prev: str | None = ..., wrap: bool = ...) -> str|PatchSet:
         ...
 
     def unidiff(self, commit='HEAD', prev=None, wrap=True):
