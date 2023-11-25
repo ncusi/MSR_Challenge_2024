@@ -172,7 +172,7 @@ def parse_shortlog_count(shortlog_lines: list[str | bytes]) -> list[AuthorStat]:
     """
     result = []
     for line in shortlog_lines:
-        count, author = line.split('\t', maxsplit=1)
+        count, author = line.split('\t' if isinstance(line, str) else b'\t', maxsplit=1)
         count = int(count.strip())
         result.append(AuthorStat(author, count))
 
