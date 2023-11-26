@@ -268,7 +268,7 @@ class GitRepo:
     @classmethod
     def clone_repository(cls, repository, directory=None,
                          working_dir=None,
-                         reference_local_repository=None,
+                         reference_local_repository=None, dissociate=None,
                          make_path_absolute=False):
         """Clone a repository into a new directory, return cloned GitRepo
 
@@ -292,6 +292,9 @@ class GitRepo:
         :param reference_local_repository: Use `reference_local_repository`
             to avoid network transfer, and to reduce local storage costs
         :type reference_local_repository: str or PathLike[str] or Path or None
+        :param dissociate: whether to dissociate with `reference_local_repository`,
+            used only if `reference_local_repository` is not None
+        :type dissociate: bool or None
         :param bool make_path_absolute: Ensure that returned `GitRepo` uses absolute path
         :return: Cloned repository as `GitRepo` if operation was successful,
             otherwise `None`.
@@ -311,8 +314,11 @@ class GitRepo:
             args.extend(['-C', str(working_dir)])
         if reference_local_repository:
             args.extend([
-                'clone', f'--reference-if-able={reference_local_repository}', repository
+                'clone', f'--reference-if-able={reference_local_repository}'
             ])
+            if dissociate:
+                args.append('--dissociate')
+            args.append(repository)
         else:
             args.extend([
                 'clone', repository
