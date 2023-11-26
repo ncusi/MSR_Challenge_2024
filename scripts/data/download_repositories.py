@@ -85,7 +85,7 @@ def download_repository(repository, repositories_path, verbose=True):
     if legacy_dir.is_dir():
         # upgrade legacy storage
         origin_url = GitRepo(legacy_dir).get_config('remote.origin.url')
-        if origin_url == repository_url:
+        if repository_url.startswith(origin_url):  # take into account repo.git vs repo
             # at this point we know that `repository_dir` does not exist
             legacy_dir.replace(repository_dir)
             legacy_dir.symlink_to(repository_dir, target_is_directory=True)
