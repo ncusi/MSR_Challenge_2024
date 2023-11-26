@@ -33,15 +33,18 @@ def download_repository(repository, repositories_path, verbose=True):
     Assumes existing directories are already cloned repositories,
     ignores all problems.
 
-    :param repository: string in format "owner/repository"
+    :param str repository: string in format "owner/repository"
     :param Path repositories_path: path to directory where to download repositories
     :param bool verbose: whether to print non-error debugging-like information
     :return: dictionary with information about cloned repository, or None on failure
     :rtype: dict or None
     """
-    repository_name = repository.split('/')[1]
+    project_name = repository.split('/')[1]
+    repository_name = '_'.join(repository.split('/'))
     repository_url = 'https://github.com/' + repository + '.git'
     repository_dir = repositories_path / repository_name
+
+    # check if repository was already cloned
     if repository_dir.is_dir():
         if verbose:
             print(f"Repository already exists: {repository_name}")
@@ -53,8 +56,66 @@ def download_repository(repository, repositories_path, verbose=True):
             'repository_path': str(repository_dir)
         }
     elif repository_dir.exists():
-        print(f"Could not clone repository for {repository_name} into '{repository_dir}'")
+        print(f"Could not clone repository for {repository_name} "
+              f"because '{repository_dir}' is in the way")
         return None
+
+    # upgrade from legacy storage, where repository was stored under `project_name`
+    legacy_dir = repositories_path / project_name
+    if legacy_dir.is_symlink():
+        # legacy dir already processed
+        reference_dir = legacy_dir.readlink()
+        if not reference_dir.is_absolute():
+            reference_dir = repository_dir / reference_dir
+        # there is possibility that this clone is not needed, if referenced URL == our URL
+        repo = GitRepo.clone_repository(repository_url, repository_dir,
+                                        reference_local_repository=reference_dir)
+        if repo is None:
+            print(f"Could not clone {repository_name} at {repository_url}\n"
+                  f"using local '{reference_dir}' as reference")
+            return None
+
+        return {
+            'project': repository_name,
+            'repository': repository,
+            'repository_url': repository_url,
+            'repository_path': str(repo),
+            'reference_repository_path': str(reference_dir),
+        }
+    if legacy_dir.is_dir():
+        # upgrade legacy storage
+        origin_url = GitRepo(legacy_dir).get_config('remote.origin.url')
+        if origin_url == repository_url:
+            # at this point we know that `repository_dir` does not exist
+            legacy_dir.replace(repository_dir)
+            legacy_dir.symlink_to(repository_dir, target_is_directory=True)
+
+            return {
+                'project': repository_name,
+                'repository': repository,
+                'repository_url': repository_url,
+                'repository_path': str(repository_dir),
+                'alternative_path': str(legacy_dir),
+            }
+        else:
+            # we can use it as reference, but need to dissociate
+            # because the symlink can be removed
+            repo = GitRepo.clone_repository(repository_url, repository_dir,
+                                            reference_local_repository=legacy_dir,
+                                            dissociate=True)
+            if repo is None:
+                print(f"Could not clone {repository_name} at {repository_url}\n"
+                      f"using local '{legacy_dir}' as temporary reference")
+                return None
+
+            return {
+                'project': repository_name,
+                'repository': repository,
+                'repository_url': repository_url,
+                'repository_path': str(repo),
+                'disassociated_reference_repository_path': str(legacy_dir),
+            }
+
     try:
         repo = GitRepo.clone_repository(repository_url, repository_dir)
         if repo is None:
@@ -75,14 +136,15 @@ def download_repository(repository, repositories_path, verbose=True):
 def download_repositories(repositories, repositories_path):
     """Clones all repositories into `repositories_path`
 
-    :param list repositories: list of repository names
+    :param list[str] repositories: list of repository names
     :param Path repositories_path: path to save data
     :return: information about successfully cloned repositories
     :rtype: list[dict]
     """
     result = []
     for repository in tqdm(repositories, desc='repositories'):
-        repo_info = download_repository(repository, repositories_path, verbose=False)
+        repo_info = download_repository(repository, repositories_path,
+                                        verbose=False)
         if repo_info is not None:
             result.append(repo_info)
 
