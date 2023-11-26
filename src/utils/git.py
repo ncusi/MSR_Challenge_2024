@@ -266,7 +266,10 @@ class GitRepo:
         return f"{self.repo!s}"
 
     @classmethod
-    def clone_repository(cls, repository, directory=None, working_dir=None, make_path_absolute=False):
+    def clone_repository(cls, repository, directory=None,
+                         working_dir=None,
+                         reference_local_repository=None,
+                         make_path_absolute=False):
         """Clone a repository into a new directory, return cloned GitRepo
 
         If there is non-empty directory preventing from cloning the repository,
@@ -284,8 +287,11 @@ class GitRepo:
             `git-clone https://git-scm.com/docs/git-clone` operation;
             otherwise current working directory is used.  The value
             of this parameter does not matter if `directory` is provided,
-            and it is an absolute path.
+            and it is an absolute path.  NOTE: tests fail for it!
         :type working_dir: str or PathLike[str] or Path or None
+        :param reference_local_repository: Use `reference_local_repository`
+            to avoid network transfer, and to reduce local storage costs
+        :type reference_local_repository: str or PathLike[str] or Path or None
         :param bool make_path_absolute: Ensure that returned `GitRepo` uses absolute path
         :return: Cloned repository as `GitRepo` if operation was successful,
             otherwise `None`.
@@ -303,9 +309,14 @@ class GitRepo:
         args = ['git']
         if working_dir is not None:
             args.extend(['-C', str(working_dir)])
-        args.extend([
-            'clone', repository
-        ])
+        if reference_local_repository:
+            args.extend([
+                'clone', f'--reference-if-able={reference_local_repository}', repository
+            ])
+        else:
+            args.extend([
+                'clone', repository
+            ])
         if directory is not None:
             args.append(str(directory))
 
