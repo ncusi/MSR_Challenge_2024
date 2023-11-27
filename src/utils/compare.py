@@ -103,7 +103,7 @@ def get_max_coverage(image, conv):
     return {'P': m_prompt.final(), 'A': m_anwser.final(),  'L': m_loc.final()}
 
 
-def diff_to_conversation(diff, conv):
+def diff_to_conversation(diff, conv, debug=False):
     ret = {}
 
     ret['ALL'] = {'coverage': 0, 'all': 0}
@@ -120,7 +120,9 @@ def diff_to_conversation(diff, conv):
             pre = get_max_coverage(preimage, conv['Conversations'])
             post = get_max_coverage(postimage, conv['Conversations'])
             
-        ret[fn][i] = {'pre': pre, 'post':post}
+        ret[fn][i] = {}
+        if debug:
+            ret[fn][i] = {'pre': pre, 'post':post}
         ret_lines = [] 
         ret_lines.extend(post['A'])
         ret_lines.extend(post['L'])
