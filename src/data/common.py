@@ -31,10 +31,9 @@ def load_repositories_json(repositories_info_path: Path) -> dict:
                                             data_descr="info about cloned repos",
                                             err_code=ERROR_ARGS, expected_type=list)
     repo_clone_data = {
-        repo_info['project']: {
+        repo_info['repository']: {
             key: value
             for key, value in repo_info.items()
-            if key != 'project'
         }
         for repo_info in repo_clone_info
     }
@@ -55,12 +54,10 @@ def reponame_to_repo_path(repo_clone_data, repo_name):
     :return: path to cloned repository, if exists, otherwise None
     :rtype: Path or None
     """
-    project_dir = repo_name.split('/')[-1]
-
-    if project_dir not in repo_clone_data:
+    if repo_name not in repo_clone_data:
         return None
 
-    return Path(repo_clone_data[project_dir]['repository_path'])
+    return Path(repo_clone_data[repo_name]['repository_path'])
 
 
 class DownloadedRepositories:
@@ -89,7 +86,7 @@ class DownloadedRepositories:
         self.repositories_info_path = repositories_info_path
         self.repo_clone_data = load_repositories_json(repositories_info_path)
 
-    def repo(self, repo_name: str) -> GitRepo:
+    def repo(self, repo_name: str) -> GitRepo|None:
         """Create GitRepo object for cloned 'RepoName' project
 
         NOTE: currently does not handle gracefully case where project / repository
@@ -98,7 +95,11 @@ class DownloadedRepositories:
 
         :param str repo_name: full name of GitHub repository, present as
             'RepoName' field in DevGPT dataset
-        :return: repository obecjt to perform operations on
-        :rtype: GitRepo
+        :return: repository object to perform operations on
+        :rtype: GitRepo or None
         """
-        return GitRepo(reponame_to_repo_path(self.repo_clone_data, repo_name))
+        repo_path = reponame_to_repo_path(self.repo_clone_data, repo_name)
+        if repo_path is not None:
+            return GitRepo(repo_path)
+        else:
+            return None
