@@ -130,16 +130,3 @@ def diff_to_conversation(diff, conversation):
         
             
     return ret
-
-
-if __name__ == "__main__":
-    # with open("20230914_074826_pr_sharings.json") as f:
-    #     data = json.load(f)
-
-    # chats = []
-
-    # for source in tqdm.tqdm(data['Sources']):
-    #     for conv in source['ChatgptSharing']:
-    #         if 'Conversations' in conv and (True or source['URL'] in diffs):
-    #             k = list(diffs.keys())[0]
-    #             chats.append(diff_to_conversation(diffs[k], conv))
