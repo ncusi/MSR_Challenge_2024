@@ -130,7 +130,6 @@ def diff_to_conversation(diff, conv):
         
         #ret_lines = set(ret_lines).union(set(post['P']))
         ret[fn][i]['lines'] = list(ret_lines)
-        ret[fn][i]['%'] = len(ret_lines) / len(postimage)
         ret['ALL']['coverage'] += len(ret_lines)
         ret['ALL']['all'] += len(postimage)
         
