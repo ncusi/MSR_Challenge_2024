@@ -56,7 +56,7 @@ class Compare:
         ret = []
         
         for line in self.image:
-            m = get_close_matches(str(line), chatl, 1, 0.75)
+            m = get_close_matches(str(line), chatl, 1, 0.6)
             if m:
                 ret.append(line.diff_line_no)
         
@@ -136,6 +136,5 @@ def diff_to_conversation(diff, conv, debug=False):
             ret[fn][i] = {}
             ret[fn][i] = {'pre': pre, 'post':post}
             ret[fn][i]['lines'] = list(ret_lines)
-        
             
     return ret
