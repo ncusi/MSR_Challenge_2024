@@ -446,6 +446,15 @@ class GitTestCase(unittest.TestCase):
         v1_oid = self.repo.to_oid("v1")
         self.assertEqual(roots_list[0], v1_oid, "root commit is v1")
 
+    def test_get_config(self):
+        """Test GitRepo.get_config() method"""
+        expected = 'A U Thor'  # set up in setUpClass() class method
+        actual = self.repo.get_config('user.name')
+        self.assertEqual(actual, expected, "got expected value for 'user.name'")
+
+        actual = self.repo.get_config('not-exists')
+        self.assertIsNone(actual, "returns `None` for invalid variable name")
+
 
 class GitClassMethodsTestCase(unittest.TestCase):
     def test_clone_repository(self):
@@ -474,6 +483,19 @@ class GitClassMethodsTestCase(unittest.TestCase):
                         shutil.rmtree(repo.repo)
                 except PermissionError:
                     pass
+
+    def test_clone_nonexistent_repository(self):
+        """Test for GitRepo.clone_repository() gracefully handling errors"""
+        # hopefully nobody will register repository with that name
+        with self.subTest("non existent repo at GitHub"):
+            repo_url = 'https://github.com/orgdoesnotexist/repodoesnotexist'
+            repo = GitRepo.clone_repository(repo_url)
+            self.assertIsNone(repo, f"repo for {repo_url} is None")
+
+        with self.subTest("not a git hosting site, non existent page"):
+            repo_url = 'https://example.com/git/repo.git'
+            repo = GitRepo.clone_repository(repo_url)
+            self.assertIsNone(repo, f"repo for {repo_url} is None")
 
 
 if __name__ == '__main__':

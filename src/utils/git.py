@@ -266,7 +266,10 @@ class GitRepo:
         return f"{self.repo!s}"
 
     @classmethod
-    def clone_repository(cls, repository, directory=None, working_dir=None, make_path_absolute=False):
+    def clone_repository(cls, repository, directory=None,
+                         working_dir=None,
+                         reference_local_repository=None, dissociate=None,
+                         make_path_absolute=False):
         """Clone a repository into a new directory, return cloned GitRepo
 
         If there is non-empty directory preventing from cloning the repository,
@@ -284,8 +287,14 @@ class GitRepo:
             `git-clone https://git-scm.com/docs/git-clone` operation;
             otherwise current working directory is used.  The value
             of this parameter does not matter if `directory` is provided,
-            and it is an absolute path.
+            and it is an absolute path.  NOTE: tests fail for it!
         :type working_dir: str or PathLike[str] or Path or None
+        :param reference_local_repository: Use `reference_local_repository`
+            to avoid network transfer, and to reduce local storage costs
+        :type reference_local_repository: str or PathLike[str] or Path or None
+        :param dissociate: whether to dissociate with `reference_local_repository`,
+            used only if `reference_local_repository` is not None
+        :type dissociate: bool or None
         :param bool make_path_absolute: Ensure that returned `GitRepo` uses absolute path
         :return: Cloned repository as `GitRepo` if operation was successful,
             otherwise `None`.
@@ -303,13 +312,30 @@ class GitRepo:
         args = ['git']
         if working_dir is not None:
             args.extend(['-C', str(working_dir)])
-        args.extend([
-            'clone', repository
-        ])
+        if reference_local_repository:
+            args.extend([
+                'clone', f'--reference-if-able={reference_local_repository}'
+            ])
+            if dissociate:
+                args.append('--dissociate')
+            args.append(repository)
+        else:
+            args.extend([
+                'clone', repository
+            ])
         if directory is not None:
             args.append(str(directory))
 
-        result = subprocess.run(args, capture_output=True)
+        # https://serverfault.com/questions/544156/git-clone-fail-instead-of-prompting-for-credentials
+        env = {
+            'GIT_TERMINAL_PROMPT': '0',
+            'GIT_SSH_COMMAND': 'ssh -oBatchMode=yes',
+            'GIT_ASKPASS': 'echo',
+            'SSH_ASKPASS': 'echo',
+            'GCM_INTERACTIVE': 'never',
+        }
+
+        result = subprocess.run(args, capture_output=True, env=env)
 
         # we are interested only in the directory where the repository was cloned into
         # that's why we are using GitRepo.path_encoding (instead of 'utf8', for example)
@@ -994,5 +1020,38 @@ class GitRepo:
         process = subprocess.run(cmd, capture_output=True, check=True, text=True)
         return process.stdout.splitlines()
 
+    def get_config(self, name, value_type=None):
+        """Query specific git config option
+
+        If there is no Git configuration variable named `name`,
+        then it returns None.
+
+        :param str name: name of configuration option, for example
+            'remote.origin.url' or 'user.name'
+        :param value_type: name of git type to canonicalize outgoing value,
+            see https://git-scm.com/docs/git-config#Documentation/git-config.txt---typelttypegt
+            optional
+        :type value_type: Literal['bool', 'int', 'bool-or-int', 'path', 'expiry-date', 'color'] or None
+        :return: value of requested git configuration variable
+        :rtype: str or None
+        """
+        cmd = [
+            'git', '-C', self.repo,
+            'config', str(name)
+        ]
+        if value_type is not None:
+            cmd.append(f"--type={value_type}")
+
+        try:
+            process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+            return process.stdout.strip()
+        except subprocess.CalledProcessError as err:
+            # This command will fail with non-zero status upon error. Some exit codes are:
+            # - The section or key is invalid (ret=1),
+            # - ...
+            if err.returncode == 1:
+                return None
+            else:
+                raise err
 
 # end of file utils/git.py
