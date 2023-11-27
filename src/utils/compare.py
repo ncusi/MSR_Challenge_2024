@@ -39,6 +39,7 @@ class Compare:
 
         self.chats.append(b)
         
+        # Max version
         # if s.real_quick_ratio() >= self.pos['r'] and s.quick_ratio() >= self.pos['r']:
         #     r = s.ratio()
         #     if  r > self.pos['r']:
@@ -46,15 +47,20 @@ class Compare:
         #         self.pos = {'r': r, 'p': pno}
         #         self.seq_match = s
         #         self.chat = b
-        #         self.chats.append(b)
-                
         #         if self.lines:
         #             self.pos['l'] = lno
 
+        # Alternate max version
+        #         self.chats.append(b)
+                
+
+        # Threshold version
         # if s.real_quick_ratio() >= 0.1 and s.quick_ratio() >= 0.1 and s.ratio() >= 0.1:
         #     self.seq_match = s
         #     self.chats.append(b)
 
+
+    # Max version 
     # def final(self):
 
     #     if not self.seq_match:
@@ -70,6 +76,8 @@ class Compare:
         
     #     return ret
 
+
+    # alternate version
     def final(self):
 
         # if not self.seq_match:
@@ -82,7 +90,7 @@ class Compare:
         ret = []
         
         for line in self.image:
-            m = get_close_matches(str(line), chatl, 1, 0.6)
+            m = get_close_matches(str(line), chatl, 1, 0.5)
             if m:
                 ret.append(line.diff_line_no)
         
