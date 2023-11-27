@@ -17,9 +17,9 @@ from os import PathLike
 from pathlib import Path
 
 import pandas as pd
-from tqdm import tqdm
 
-from src.data.common import load_repositories_json, reponame_to_repo_path
+from src.data.common import (load_repositories_json,
+                             compute_chatgpt_sharings_stats, add_is_cloned_column)
 from src.data.sharings import find_most_recent_commit_sharings
 from src.utils.functools import timed
 
@@ -79,85 +79,6 @@ def process_commit_sharings(commit_sharings_path, repo_clone_data):
     add_is_cloned_column(df_repo, repo_clone_data)
 
     return df_commit, df_repo
-
-
-def compute_chatgpt_sharings_stats(the_sharings):
-    """Replace 'ChatgptSharing' field by its stats / summary
-
-    This summary includes the following fields:
-
-    - 'NumberOfChaptgptSharings'
-    - 'TotalNumberOfPrompts'
-    - 'TotalTokensOfPrompts'
-    - 'TotalTokensOfAnswers'
-    - 'NumberOfConversations'
-    - 'Status404' - in how many cases 'Status' was 404 (Not Found)
-    - 'ModelGPT4', 'ModelGPT3.5', 'ModelOther' - count the cases where
-      'Model' field was 'GPT-4', was ''Default (GPT-3.5)', or had other
-      value, respectively
-
-    :param dict the_sharings: the 'Sources' part of sharing from DevGPT dataset,
-        read from the JSON file; is *modified* by function
-    :return: modified input
-    :rtype: dict
-    """
-    chatgpt_sharings = {}
-    for source in tqdm(the_sharings, desc='source'):
-        chatgpt_sharings_list = source['ChatgptSharing']
-        chatgpt_sharings[source['Sha']] = chatgpt_sharings_list
-        del source['ChatgptSharing']
-
-        source['NumberOfChatgptSharings'] = len(chatgpt_sharings_list)
-        source['TotalNumberOfPrompts'] = 0
-        source['TotalTokensOfPrompts'] = 0
-        source['TotalTokensOfAnswers'] = 0
-        source['NumberOfConversations'] = 0
-        source['ModelGPT4'] = 0
-        source['ModelGPT3.5'] = 0
-        source['ModelOther'] = 0
-        source['Status404'] = 0
-        for chatgpt_sharing in chatgpt_sharings_list:
-            # just in case value is null, or key is missing
-            source['TotalNumberOfPrompts'] += chatgpt_sharing.get('NumberOfPrompts') or 0
-            source['TotalTokensOfPrompts'] += chatgpt_sharing.get('TokensOfPrompts') or 0
-            source['TotalTokensOfAnswers'] += chatgpt_sharing.get('TokensOfAnswers') or 0
-
-            if 'Status' in chatgpt_sharing and chatgpt_sharing['Status'] == 404:
-                source['Status404'] += 1
-
-            if 'Model' in chatgpt_sharing:
-                if chatgpt_sharing['Model'] == 'GPT-4':
-                    source['ModelGPT4'] += 1
-                elif chatgpt_sharing['Model'] == 'Default (GPT-3.5)':
-                    source['ModelGPT3.5'] += 1
-                else:
-                    source['ModelOther'] += 1
-
-            if 'Conversations' in chatgpt_sharing and chatgpt_sharing['Conversations'] is not None:
-                conversations = chatgpt_sharing['Conversations']
-                source['NumberOfConversations'] += len(conversations)
-
-            # ...
-
-    return the_sharings
-
-
-def add_is_cloned_column(df_repo, repo_clone_data):
-    """Compute and add 'is_cloned' column to `df_repo` dataframe
-
-    :param pd.DataFrame df_repo: dataframe to modify, assumed to
-        be indexed with 'RepoName'
-    :param dict repo_clone_data: value returned by load_repositories_json()
-        function from src.data.common module.
-    :return: modified dataframe
-    :rtype: pd.DataFrame
-    """
-    df_repo.loc[:, 'is_cloned'] = df_repo.index.map(
-        lambda repo_name: bool(reponame_to_repo_path(repo_clone_data, repo_name)),
-        na_action='ignore'
-    )
-
-    return df_repo
 
 
 @timed

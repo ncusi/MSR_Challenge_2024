@@ -6,6 +6,34 @@ Extract information about prs from DevGPT's *_pr_sharings.json
 in the <dataset_path>, aggregating data about ChatGPT conversations.
 Aggregate information about projects (group by project).
 
+From https://github.com/NAIST-SE/DevGPT/blob/main/README.md#github-pull-request
+- 'Type': Source type (always "pull request")
+- 'URL': URL to the mentioned source
+  (https://github.com/{{owner}}/{{repo}}/pulls/{{pull_number}})
+- 'Author': Author who introduced this mention (GitHub author, e.g. "tisztamo")
+- 'RepoName': Name of the repository that contains this pull request
+  (full repo name: {{owner}}/{{repo}}, e.g. "dotCMS/core")
+- 'RepoLanguage': Primary programming language of the repository that contains
+  this pull request. NOTE: it can be null when this repository does not contain
+  any code (e.g. "C++", "Python", "HTML",...)
+- 'Number': Pull request number of this mention (that is, {{pull_number}} in URL)
+- 'Title': Title of this pull request (e.g. "Add URLPattern logo")
+- 'Body': Description of this pull request (might be empty, i.e. "")
+- 'CreatedAt': When the author created this pull request
+  (e.g. "2023-09-16T06:02:27Z")
+- 'ClosedAt': When this pull request was closed
+  NOTE: it can be null when this issue is not closed
+- 'MergedAt': When this pull request was merged
+  NOTE: it can be null when this issue is not merged
+- 'UpdatedAt': When the latest update occurred
+- 'State': The state of this pull request (i.e., OPEN, CLOSED, MERGED)
+- 'Additions': Number of lines added in this pull request
+- 'Deletions': Number of lines deleted in this pull request
+- 'ChangedFiles': Number of files changed in this pull request
+- 'CommitsTotalCount': Number of commits included in this pull request
+- 'CommitSha': A *list* of commit Shas that are included in this pull request
+- 'ChatgptSharing':	A *list* of ChatGPT link mentions.
+
 Example:
     python scripts/data/pr_sharings_to_agg.py \\
         data/external/DevGPT/ data/repositories_download_status.json \\
@@ -19,9 +47,11 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from src.data.common import load_repositories_json
+from src.data.common import (load_repositories_json,
+                             compute_chatgpt_sharings_stats, add_is_cloned_column)
 from src.data.sharings import find_most_recent_pr_sharings
 from src.utils.functools import timed
+from src.utils.github import get_Github, get_github_repo_cached, get_github_pull_request
 
 # constants
 ERROR_ARGS = 1
@@ -29,11 +59,30 @@ ERROR_OTHER = 2
 
 
 def process_pr_sharings(pr_sharings_path, repo_clone_data):
-    """
+    """Read commit sharings, convert to dataframe, and aggregate over repos
 
-    :param PathLike pr_sharings_path:
-    :param dict repo_clone_data:
-    :return:
+    In DevGPT GitHub PR sharings, there are a few fields that are not scalar
+    valued. One of them is 'ChaptgptSharing' field.  To convert ChatGPT sharing
+    to dataframe, values contained in this field needs to be summarized into
+    a few scalars (see docstring for :func:`compute_chatgpt_sharings_stats`).
+
+    Another is 'CommitSha', which contains a list of commit Shas that are
+    included in given pull request.  We can extract first and last commit
+    from this list (the number of commits is already included as a
+    'CommitsTotalCount' field), and ask GitHub API for merge commit,
+    if pull request was merged in.
+
+    Additionally, an aggregate over repositories is computed, and also
+    returned.  This aggregate dataframe included basic information about
+    the repository, and the summary of the summary of non-scalar fields.
+
+    :param PathLike pr_sharings_path: path to pr sharings JSON file
+        from DevGPT dataset; the format of this JSON file is described in
+        https://github.com/NAIST-SE/DevGPT/blob/main/README.md#github-pull-request
+    :param dict repo_clone_data: information extracted from <repositories.json>,
+        used to add 'is_cloned' column to one of resulting dataframes
+    :return: sharings aggregated over commit (first dataframe), an over
+        repos (second dataframe in the tuple)
     :rtype: (pd.DataFrame, pd.DataFrame)
     """
     with open(pr_sharings_path) as pr_sharings_file:
@@ -44,53 +93,25 @@ def process_pr_sharings(pr_sharings_path, repo_clone_data):
         sys.exit(ERROR_OTHER)
 
     pr_sharings = pr_sharings['Sources']
-    chatgpt_sharings = {}
-    for source in tqdm(pr_sharings, desc='source'):
-        chatgpt_sharings_list = source['ChatgptSharing']
-        chatgpt_sharings[source['CommitSha']] = chatgpt_sharings_list
-        del source['ChatgptSharing']
-
-        source['NumberOfChatgptSharings'] = len(chatgpt_sharings_list)
-        source['TotalNumberOfPrompts'] = 0
-        source['TotalTokensOfPrompts'] = 0
-        source['TotalTokensOfAnswers'] = 0
-        source['NumberOfConversations'] = 0
-        source['ModelGPT4'] = 0
-        source['ModelGPT3.5'] = 0
-        source['ModelOther'] = 0
-        source['Status404'] = 0
-        for chatgpt_sharing in chatgpt_sharings_list:
-            # just in case value is null, or key is missing
-            source['TotalNumberOfPrompts'] += chatgpt_sharing.get('NumberOfPrompts') or 0
-            source['TotalTokensOfPrompts'] += chatgpt_sharing.get('TokensOfPrompts') or 0
-            source['TotalTokensOfAnswers'] += chatgpt_sharing.get('TokensOfAnswers') or 0
-
-            if 'Status' in chatgpt_sharing and chatgpt_sharing['Status'] == 404:
-                source['Status404'] += 1
-
-            if 'Model' in chatgpt_sharing:
-                if chatgpt_sharing['Model'] == 'GPT-4':
-                    source['ModelGPT4'] += 1
-                elif chatgpt_sharing['Model'] == 'Default (GPT-3.5)':
-                    source['ModelGPT3.5'] += 1
-                else:
-                    source['ModelOther'] += 1
-
-            if 'Conversations' in chatgpt_sharing and chatgpt_sharing['Conversations'] is not None:
-                conversations = chatgpt_sharing['Conversations']
-                source['NumberOfConversations'] += len(conversations)
-
-            # ...
+    compute_commitsha_stats(pr_sharings)
+    retrieve_merge_commit_sha_for_pr(pr_sharings)
+    compute_chatgpt_sharings_stats(pr_sharings)
 
     df_pr = pd.DataFrame.from_records(pr_sharings)
 
     grouped = df_pr.groupby(by=['RepoName'], dropna=False)
     df_repo = grouped.agg({
         'RepoLanguage': 'first',
-        'CommitSha': 'count',
+        'Number': 'count',  # counts PR per repo
+        'Sha': 'count',  # generated by retrieve_merge_commit_sha_for_pr()
         **{
             col: 'sum'
             for col in [
+                # directly from DevGPT pr sharings file
+                'Additions', 'Deletions',
+                'ChangedFiles',
+                'CommitsTotalCount',
+                # from data added by compute_chatgpt_sharings_stats()
                 'NumberOfChatgptSharings', 'Status404',
                 'ModelGPT4', 'ModelGPT3.5', 'ModelOther',
                 'TotalNumberOfPrompts', 'TotalTokensOfPrompts', 'TotalTokensOfAnswers',
@@ -99,12 +120,52 @@ def process_pr_sharings(pr_sharings_path, repo_clone_data):
         }
     })
 
-    df_repo.loc[:, 'is_cloned'] = df_repo.index.map(
-        lambda repo: repo.split('/')[-1] in repo_clone_data,
-        na_action='ignore'
-    )
+    add_is_cloned_column(df_repo, repo_clone_data)
 
     return df_pr, df_repo
+
+
+def compute_commitsha_stats(the_sharings):
+    for source in tqdm(the_sharings, desc="source ('CommitSha')"):
+        commitsha_list = source['CommitSha']
+        del source['CommitSha']
+
+        source['FirstCommitSha'] = commitsha_list[0]
+        source['LastCommitSha'] = commitsha_list[-1]
+
+
+def retrieve_merge_commit_sha_for_pr(pr_sharings):
+    g = get_Github()
+    github_repo_cache = {}
+
+    print("Adding merge_commit_sha...", file=sys.stderr)
+    for source in tqdm(pr_sharings, desc="source"):
+        repo_name = source['RepoName']
+
+        repo = get_github_repo_cached(g, repo_name,
+                                      repo_name, github_repo_cache)
+        if repo is None:
+            tqdm.write(f"WARNING: couldn't access repo on GitHub: {repo_name}")
+            continue
+
+        pull_request = get_github_pull_request(repo, source['Number'])
+        if pull_request is None:
+            tqdm.write(f"WARNING: couldn't access #{source['Number']} pull request in {repo_name} repo")
+            continue
+
+        # accessing attribute is faster than running pull_request.is_merged()
+        if pull_request.merged:
+            sha = pull_request.merge_commit_sha
+        else:
+            # there is trial (?) merge sha for unmerged pull request, but
+            # "This commit does not belong to any branch on this repository,
+            #  and may belong to a fork outside of the repository."
+            sha = None
+
+        if 'Sha' in source:
+            source['MergeSha'] = sha
+        else:
+            source['Sha'] = sha
 
 
 @timed
