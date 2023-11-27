@@ -99,12 +99,27 @@ def process_commit_sharings(commit_sharings_path, repo_clone_data):
         }
     })
 
+    add_is_cloned_column(df_repo, repo_clone_data)
+
+    return df_commit, df_repo
+
+
+def add_is_cloned_column(df_repo, repo_clone_data):
+    """Compute and add 'is_cloned' column to `df_repo` dataframe
+
+    :param pd.DataFrame df_repo: dataframe to modify, assumed to
+        be indexed with 'RepoName'
+    :param dict repo_clone_data: value returned by load_repositories_json()
+        function from src.data.common module.
+    :return: modified dataframe
+    :rtype: pd.DataFrame
+    """
     df_repo.loc[:, 'is_cloned'] = df_repo.index.map(
         lambda repo_name: bool(reponame_to_repo_path(repo_clone_data, repo_name)),
         na_action='ignore'
     )
 
-    return df_commit, df_repo
+    return df_repo
 
 
 @timed
