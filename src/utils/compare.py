@@ -106,7 +106,7 @@ def get_max_coverage(image, conv):
 def diff_to_conversation(diff, conv, debug=False):
     ret = {}
 
-    ret['ALL'] = {'coverage': 0, 'all': 0}
+    ret['ALL'] = {'coverage': 0, 'all': 0, 'lines': []}
 
     if 'Conversations' not in conv:
         return ret
@@ -120,9 +120,6 @@ def diff_to_conversation(diff, conv, debug=False):
             pre = get_max_coverage(preimage, conv['Conversations'])
             post = get_max_coverage(postimage, conv['Conversations'])
             
-        ret[fn][i] = {}
-        if debug:
-            ret[fn][i] = {'pre': pre, 'post':post}
         ret_lines = [] 
         ret_lines.extend(post['A'])
         ret_lines.extend(post['L'])
@@ -131,9 +128,14 @@ def diff_to_conversation(diff, conv, debug=False):
         # this has to be done on source lines and may be expensive 
         
         #ret_lines = set(ret_lines).union(set(post['P']))
-        ret[fn][i]['lines'] = list(ret_lines)
         ret['ALL']['coverage'] += len(ret_lines)
         ret['ALL']['all'] += len(postimage)
+        ret['ALL']['lines'].append(list(ret_lines))
+
+        if debug:
+            ret[fn][i] = {}
+            ret[fn][i] = {'pre': pre, 'post':post}
+            ret[fn][i]['lines'] = list(ret_lines)
         
             
     return ret
