@@ -35,19 +35,21 @@ class Compare:
     
     def compare(self, b, pno, lno = None):
         a = self.simage
-        s = SequenceMatcher(None, a, b)
+        # s = SequenceMatcher(None, a, b)
+
+        self.chats.append(b)
         
-        if s.real_quick_ratio() >= self.pos['r'] and s.quick_ratio() >= self.pos['r']:
-            r = s.ratio()
-            if  r > self.pos['r']:
+        # if s.real_quick_ratio() >= self.pos['r'] and s.quick_ratio() >= self.pos['r']:
+        #     r = s.ratio()
+        #     if  r > self.pos['r']:
                 
-                self.pos = {'r': r, 'p': pno}
-                self.seq_match = s
-                self.chat = b
-                self.chats.append(b)
+        #         self.pos = {'r': r, 'p': pno}
+        #         self.seq_match = s
+        #         self.chat = b
+        #         self.chats.append(b)
                 
-                if self.lines:
-                    self.pos['l'] = lno
+        #         if self.lines:
+        #             self.pos['l'] = lno
 
         # if s.real_quick_ratio() >= 0.1 and s.quick_ratio() >= 0.1 and s.ratio() >= 0.1:
         #     self.seq_match = s
@@ -70,8 +72,8 @@ class Compare:
 
     def final(self):
 
-        if not self.seq_match:
-            return []
+        # if not self.seq_match:
+        #     return []
         
         chatl = []
         for chat in self.chats:
