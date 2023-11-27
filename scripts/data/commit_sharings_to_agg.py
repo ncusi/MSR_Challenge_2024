@@ -29,11 +29,24 @@ ERROR_OTHER = 2
 
 
 def process_commit_sharings(commit_sharings_path, repo_clone_data):
-    """
+    """Read commit sharings, convert to dataframe, and aggregate over repos
 
-    :param PathLike commit_sharings_path:
-    :param dict repo_clone_data:
-    :return:
+    In DevGPT GitHub Commit sharings, the only field that is not scalar valued
+    is 'ChaptgptSharing' field.  To convert commit sharing to dataframe,
+    values contained in this field needs to be summarized into a few scalars
+    (see docstring for :func:`compute_chatgpt_sharings_stats`).
+
+    Additionally, an aggregate over repositories is computed, and also
+    returned.  This aggregate dataframe included basic informations about
+    the repository, and the summary of the summary of 'ChatgptSharing' field.
+
+    :param PathLike commit_sharings_path: path to commit sharings JSON file
+        from DevGPT dataset; the format of this JSON file is described in
+        https://github.com/NAIST-SE/DevGPT/blob/main/README.md#github-commit
+    :param dict repo_clone_data: information extracted from <repositories.json>,
+        used to add 'is_cloned' column to one of resulting dataframes
+    :return: sharings aggregated over commit (first dataframe), an over
+        repos (second dataframe in the tuple)
     :rtype: (pd.DataFrame, pd.DataFrame)
     """
     with open(commit_sharings_path) as commit_sharings_file:
@@ -70,6 +83,18 @@ def process_commit_sharings(commit_sharings_path, repo_clone_data):
 
 def compute_chatgpt_sharings_stats(the_sharings):
     """Replace 'ChatgptSharing' field by its stats / summary
+
+    This summary includes the following fields:
+
+    - 'NumberOfChaptgptSharings'
+    - 'TotalNumberOfPrompts'
+    - 'TotalTokensOfPrompts'
+    - 'TotalTokensOfAnswers'
+    - 'NumberOfConversations'
+    - 'Status404' - in how many cases 'Status' was 404 (Not Found)
+    - 'ModelGPT4', 'ModelGPT3.5', 'ModelOther' - count the cases where
+      'Model' field was 'GPT-4', was ''Default (GPT-3.5)', or had other
+      value, respectively
 
     :param dict the_sharings: the 'Sources' part of sharing from DevGPT dataset,
         read from the JSON file; is *modified* by function
