@@ -103,7 +103,7 @@ def get_max_coverage(image, conv):
     return {'P': m_prompt.final(), 'A': m_anwser.final(),  'L': m_loc.final()}
 
 
-def diff_to_conversation(diff, conversation):
+def diff_to_conversation(diff, conv):
     ret = {}
     if 'Conversations' not in conv:
         return ret
