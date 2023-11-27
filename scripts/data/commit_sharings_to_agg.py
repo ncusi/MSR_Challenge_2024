@@ -44,8 +44,40 @@ def process_commit_sharings(commit_sharings_path, repo_clone_data):
         sys.exit(ERROR_OTHER)
 
     commit_sharings = commit_sharings['Sources']
+    compute_chatgpt_sharings_stats(commit_sharings)
+
+    df_commit = pd.DataFrame.from_records(commit_sharings)
+
+    grouped = df_commit.groupby(by=['RepoName'], dropna=False)
+    df_repo = grouped.agg({
+        'RepoLanguage': 'first',
+        'Sha': 'count',
+        **{
+            col: 'sum'
+            for col in [
+                'NumberOfChatgptSharings', 'Status404',
+                'ModelGPT4', 'ModelGPT3.5', 'ModelOther',
+                'TotalNumberOfPrompts', 'TotalTokensOfPrompts', 'TotalTokensOfAnswers',
+                'NumberOfConversations',
+            ]
+        }
+    })
+
+    add_is_cloned_column(df_repo, repo_clone_data)
+
+    return df_commit, df_repo
+
+
+def compute_chatgpt_sharings_stats(the_sharings):
+    """Replace 'ChatgptSharing' field by its stats / summary
+
+    :param dict the_sharings: the 'Sources' part of sharing from DevGPT dataset,
+        read from the JSON file; is *modified* by function
+    :return: modified input
+    :rtype: dict
+    """
     chatgpt_sharings = {}
-    for source in tqdm(commit_sharings, desc='source'):
+    for source in tqdm(the_sharings, desc='source'):
         chatgpt_sharings_list = source['ChatgptSharing']
         chatgpt_sharings[source['Sha']] = chatgpt_sharings_list
         del source['ChatgptSharing']
@@ -82,26 +114,7 @@ def process_commit_sharings(commit_sharings_path, repo_clone_data):
 
             # ...
 
-    df_commit = pd.DataFrame.from_records(commit_sharings)
-
-    grouped = df_commit.groupby(by=['RepoName'], dropna=False)
-    df_repo = grouped.agg({
-        'RepoLanguage': 'first',
-        'Sha': 'count',
-        **{
-            col: 'sum'
-            for col in [
-                'NumberOfChatgptSharings', 'Status404',
-                'ModelGPT4', 'ModelGPT3.5', 'ModelOther',
-                'TotalNumberOfPrompts', 'TotalTokensOfPrompts', 'TotalTokensOfAnswers',
-                'NumberOfConversations',
-            ]
-        }
-    })
-
-    add_is_cloned_column(df_repo, repo_clone_data)
-
-    return df_commit, df_repo
+    return the_sharings
 
 
 def add_is_cloned_column(df_repo, repo_clone_data):
