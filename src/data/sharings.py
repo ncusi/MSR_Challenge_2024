@@ -86,6 +86,18 @@ def find_most_recent_commit_sharings(dataset_directory_path, verbose=True):
     return find_most_recent_sharings_files(dataset_directory_path, verbose)['commit']
 
 
+def find_most_recent_pr_sharings(dataset_directory_path, verbose=True):
+    """Find pr sharings from most recent snapshot in DevGPT dataset
+
+    :param Path dataset_directory_path: path to directory with DevGPT dataset
+    :param bool verbose: whether to print debugging-like information,
+        `true` by default
+    :return: path to most recent pr sharings file
+    :rtype: Path
+    """
+    return find_most_recent_sharings_files(dataset_directory_path, verbose)['pr']
+
+
 def sharings_repo_list(sharings_path):
     """List all different 'RepoName' that can be found in DevGPT sharings
 
