@@ -114,27 +114,29 @@ def diff_to_conversation(diff, conv, debug=False):
     for file in diff:
         fn = file.source_file
         ret[fn] = {}
+
         for i, hunk in enumerate(file):
             preimage, postimage = get_hunk_images(hunk)
             
             pre = get_max_coverage(preimage, conv['Conversations'])
             post = get_max_coverage(postimage, conv['Conversations'])
             
-        ret_lines = [] 
-        ret_lines.extend(post['A'])
-        ret_lines.extend(post['L'])
-        # TODO: check how many remove lines from 'P' 
-        # that are exactly the same as in 'A' + 'L'.
-        # this has to be done on source lines and may be expensive 
-        
-        #ret_lines = set(ret_lines).union(set(post['P']))
-        ret['ALL']['coverage'] += len(ret_lines)
-        ret['ALL']['all'] += len(postimage)
-        ret['ALL']['lines'].append(list(ret_lines))
+            ret_lines = [] 
+            ret_lines.extend(post['A'])
+            ret_lines.extend(post['L'])
+            ret_lines = set(ret_lines)
+            # TODO: check how many remove lines from 'P' 
+            # that are exactly the same as in 'A' + 'L'.
+            # this has to be done on source lines and may be expensive 
+            
+            #ret_lines = set(ret_lines).union(set(post['P']))
+            ret['ALL']['coverage'] += len(ret_lines)
+            ret['ALL']['all'] += len(postimage)
+            ret['ALL']['lines'].append(list(ret_lines))
 
-        if debug:
-            ret[fn][i] = {}
-            ret[fn][i] = {'pre': pre, 'post':post}
-            ret[fn][i]['lines'] = list(ret_lines)
+            if debug:
+                ret[fn][i] = []
+                ret[fn][i] = {'pre': pre, 'post':post}
+                ret[fn][i]['lines'] = list(ret_lines)
             
     return ret
