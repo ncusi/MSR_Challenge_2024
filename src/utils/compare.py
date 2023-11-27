@@ -37,20 +37,21 @@ class Compare:
         a = self.simage
         s = SequenceMatcher(None, a, b)
         
-        # if s.real_quick_ratio() >= self.pos['r'] and s.quick_ratio() >= self.pos['r']:
-        #     r = s.ratio()
-        #     if  r > self.pos['r']:
+        if s.real_quick_ratio() >= self.pos['r'] and s.quick_ratio() >= self.pos['r']:
+            r = s.ratio()
+            if  r > self.pos['r']:
                 
-        #         self.pos = {'r': r, 'p': pno}
-        #         self.seq_match = s
-        #         self.chat = b
+                self.pos = {'r': r, 'p': pno}
+                self.seq_match = s
+                self.chat = b
+                self.chats.append(b)
                 
-        #         if self.lines:
-        #             self.pos['l'] = lno
+                if self.lines:
+                    self.pos['l'] = lno
 
-        if s.real_quick_ratio() >= 0.1 and s.quick_ratio() >= 0.1 and s.ratio() >= 0.1:
-            self.seq_match = s
-            self.chats.append(b)
+        # if s.real_quick_ratio() >= 0.1 and s.quick_ratio() >= 0.1 and s.ratio() >= 0.1:
+        #     self.seq_match = s
+        #     self.chats.append(b)
 
     # def final(self):
 
