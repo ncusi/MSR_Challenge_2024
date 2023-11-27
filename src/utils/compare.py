@@ -105,6 +105,9 @@ def get_max_coverage(image, conv):
 
 def diff_to_conversation(diff, conv):
     ret = {}
+
+    ret['ALL'] = {'coverage': 0, 'all': 0}
+
     if 'Conversations' not in conv:
         return ret
         
@@ -126,7 +129,10 @@ def diff_to_conversation(diff, conv):
         # this has to be done on source lines and may be expensive 
         
         #ret_lines = set(ret_lines).union(set(post['P']))
-        ret[fn][i]['lines']=list(ret_lines)
+        ret[fn][i]['lines'] = list(ret_lines)
+        ret[fn][i]['%'] = len(ret_lines) / len(postimage)
+        ret['ALL']['coverage'] += len(ret_lines)
+        ret['ALL']['all'] += len(postimage)
         
             
     return ret
