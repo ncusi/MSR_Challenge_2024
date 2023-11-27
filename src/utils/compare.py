@@ -48,7 +48,7 @@ class Compare:
         #         if self.lines:
         #             self.pos['l'] = lno
 
-        if s.real_quick_ratio() >= 0.5 and s.quick_ratio() >= 0.5 and s.ratio() >= 0.5:
+        if s.real_quick_ratio() >= 0.1 and s.quick_ratio() >= 0.1 and s.ratio() >= 0.1:
             self.seq_match = s
             self.chats.append(b)
 
