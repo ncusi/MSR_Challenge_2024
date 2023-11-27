@@ -19,7 +19,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from src.data.common import load_repositories_json
+from src.data.common import load_repositories_json, reponame_to_repo_path
 from src.data.sharings import find_most_recent_commit_sharings
 from src.utils.functools import timed
 
@@ -100,7 +100,7 @@ def process_commit_sharings(commit_sharings_path, repo_clone_data):
     })
 
     df_repo.loc[:, 'is_cloned'] = df_repo.index.map(
-        lambda repo: repo.split('/')[-1] in repo_clone_data,
+        lambda repo_name: bool(reponame_to_repo_path(repo_clone_data, repo_name)),
         na_action='ignore'
     )
 
