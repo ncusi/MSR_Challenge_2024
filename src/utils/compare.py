@@ -16,6 +16,22 @@ def to_str(self):
 Hunk.to_str = to_str
 
 
+def get_close_matches2(word, pos, n, cutoff):
+    match_size = 0
+    match_word = ""
+
+    for p in pos:
+        m = SequenceMatcher(a=word, b=p).find_longest_match()
+        if m.size > match_size:
+            match_size = m.size
+            match_word = p
+    
+    if match_size == 0 or (match_size / len(word)) < 0.5:
+        return None
+
+    return match_word
+
+
 class Compare:
     def __init__(self, image, lines = False):
         
@@ -90,7 +106,8 @@ class Compare:
         ret = []
         
         for line in self.image:
-            m = get_close_matches(str(line), chatl, 1, 0.5)
+            #m = get_close_matches(str(line), chatl, 1, 0.5)
+            m = get_close_matches2(str(line), chatl, 1, 0.5)
             if m:
                 ret.append(line.diff_line_no)
         
