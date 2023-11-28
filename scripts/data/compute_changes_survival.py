@@ -110,6 +110,7 @@ def process_single_commit(repo: GitRepo,
 
     augment_curr = {
         'Sha': gpt_commit,  # to be used for join
+        'Sha_is_valid': True,
         'author_timestamp': commit_metadata['author']['timestamp'],
         'committer_timestamp': commit_metadata['committer']['timestamp'],
         'n_parents': len(commit_metadata['parents']),
@@ -340,6 +341,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
     total_stats = Counter({
         'n_skipped': 0,
         'n_missing_sha': 0,
+        'n_missing_commit': 0,
         'n_errors': 0,
         'n_unmerged': 0,
         'lines_survived_sum': 0,
@@ -367,6 +369,15 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
             # remember for re-use
             repo_cache[project_name] = repo
 
+        gpt_commit_is_valid = repo.is_valid_commit(gpt_commit)
+        if not gpt_commit_is_valid:
+            total_stats['n_missing_commit'] += 1
+            augment_data.append({
+                'Sha': gpt_commit,  # to be used for join
+                'Sha_is_valid': False,
+            })
+            continue
+
         augment_curr, survival_info, blamed_commits_info \
             = process_single_commit(repo, project_name, gpt_commit, total_stats)
         augment_data.append(augment_curr)
@@ -388,6 +399,9 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
               file=sys.stderr)
     if total_stats['n_errors'] > 0:
         print(f"Skipped {total_stats['n_errors']} rows because of an error",
+              file=sys.stderr)
+    if total_stats['n_missing_commit'] > 0:
+        print(f"There were {total_stats['n_missing_commit']} commits not found in their repo",
               file=sys.stderr)
     if total_stats['n_unmerged'] > 0:
         print(f"There were {total_stats['n_unmerged']} commits not merged into HEAD",
