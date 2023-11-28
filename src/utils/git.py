@@ -248,6 +248,7 @@ class GitRepo:
     path_encoding = 'utf8'
     default_file_encoding = 'utf8'
     log_encoding = 'utf8'
+    fallback_encoding = 'latin1'  # must be 8-bit encoding
     # see 346245a1bb ("hard-code the empty tree object", 2008-02-13)
     # https://github.com/git/git/commit/346245a1bb6272dd370ba2f7b9bf86d3df5fed9a
     # https://github.com/git/git/commit/e1ccd7e2b1cae8d7dab4686cddbd923fb6c46953
@@ -508,11 +509,11 @@ class GitRepo:
         ...
 
     @overload
-    def unidiff(self, commit: str = ..., prev: str|None = ..., *, wrap: Literal[False]) -> str:
+    def unidiff(self, commit: str = ..., prev: str|None = ..., *, wrap: Literal[False]) -> str|bytes:
         ...
 
     @overload
-    def unidiff(self, commit: str = ..., prev: str | None = ..., wrap: bool = ...) -> str|PatchSet:
+    def unidiff(self, commit: str = ..., prev: str|None = ..., wrap: bool = ...) -> str|bytes|PatchSet:
         ...
 
     def unidiff(self, commit='HEAD', prev=None, wrap=True):
@@ -534,7 +535,7 @@ class GitRepo:
         :param bool wrap: whether to wrap the result in PatchSet
         :return: the changes between two arbitrary commits,
             `prev` and `commit`
-        :rtype: str or PatchSet
+        :rtype: str or bytes or PatchSet
         """
         if prev is None:
             try:
@@ -550,13 +551,17 @@ class GitRepo:
             prev, commit
         ]
         process = subprocess.run(cmd,
-                                 capture_output=True, check=True,
-                                 encoding=self.default_file_encoding)
+                                 capture_output=True, check=True)
+        try:
+            diff_output = process.stdout.decode(self.default_file_encoding)
+        except UnicodeDecodeError:
+            # unidiff.PatchSet can only handle strings
+            diff_output = process.stdout.decode(self.fallback_encoding)
 
         if wrap:
-            return PatchSet(process.stdout)
+            return PatchSet(diff_output)
         else:
-            return process.stdout
+            return diff_output
 
     def changed_lines_extents(self, commit='HEAD', prev=None, side=DiffSide.POST):
         # TODO: implement also for DiffSide.PRE
