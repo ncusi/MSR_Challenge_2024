@@ -355,9 +355,9 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
         repository_path = reponame_to_repo_path(repo_clone_data, project_name)
         if repository_path is None:
             total_stats['n_skipped'] += 1
-        if gpt_commit is None:
+        if pd.isna(gpt_commit):
             total_stats['n_missing_sha'] += 1
-        if repository_path is None or gpt_commit is None:
+        if repository_path is None or pd.isna(gpt_commit):
             continue
 
         repo = repo_cache.get(project_name, None)
