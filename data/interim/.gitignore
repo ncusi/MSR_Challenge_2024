@@ -4,3 +4,5 @@
 /commit_sharings_lines_survival_df.csv
 /repository_statistics_git.json
 /repository_statistics_github.json
+/pr_sharings_df.csv
+/pr_sharings_groupby_repo_df.csv
