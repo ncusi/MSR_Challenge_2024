@@ -891,9 +891,19 @@ class GitRepo:
             *line_args,
             file
         ]
-        process = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        process = subprocess.run(cmd, capture_output=True, check=True)
+
+        # TODO: extract this into a helper function
+        try:
+            output = process.stdout.decode(self.default_file_encoding)
+        except UnicodeDecodeError:
+            # not a valid utf-8, simply use bytes
+            #output = process.stdout
+            # _parse_blame_porcelain _currently_ can only handle strings
+            output = process.stdout.decode(self.fallback_encoding)
+
         return _parse_blame_porcelain(
-            process.stdout
+            output
         )
 
     def changes_survival(self, commit, prev=None):
