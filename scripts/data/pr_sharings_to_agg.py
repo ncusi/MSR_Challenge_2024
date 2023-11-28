@@ -95,6 +95,7 @@ def process_pr_sharings(pr_sharings_path, repo_clone_data):
     pr_sharings = pr_sharings['Sources']
     compute_commitsha_stats(pr_sharings)
     retrieve_merge_commit_sha_for_pr(pr_sharings)
+    compute_pr_state_stats(pr_sharings)
     compute_chatgpt_sharings_stats(pr_sharings)
 
     df_pr = pd.DataFrame.from_records(pr_sharings)
@@ -111,6 +112,8 @@ def process_pr_sharings(pr_sharings_path, repo_clone_data):
                 'Additions', 'Deletions',
                 'ChangedFiles',
                 'CommitsTotalCount',
+                # from data added by compute_pr_state_stats()
+                'StateOpen', 'StateClosed', 'StateMerged',
                 # from data added by compute_chatgpt_sharings_stats()
                 'NumberOfChatgptSharings', 'Status404',
                 'ModelGPT4', 'ModelGPT3.5', 'ModelOther',
@@ -166,6 +169,21 @@ def retrieve_merge_commit_sha_for_pr(pr_sharings):
             source['MergeSha'] = sha
         else:
             source['Sha'] = sha
+
+
+def compute_pr_state_stats(the_sharings):
+    for source in tqdm(the_sharings, desc="source ('State')"):
+        if 'State' not in source:
+            tqdm.write(f"warning: 'State' field is missing "
+                       f"for {source['RepoName']} PR #{source['Number']}")
+            continue
+
+        pr_state = source['State']
+        # it is a scalar field, we just one-hot encode it in addition
+
+        source['StateOpen'] = bool(pr_state == 'OPEN')
+        source['StateClosed'] = bool(pr_state == 'CLOSED')
+        source['StateMerged'] = bool(pr_state == 'MERGED')
 
 
 @timed
