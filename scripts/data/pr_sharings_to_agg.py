@@ -103,13 +103,21 @@ def process_pr_sharings(pr_sharings_path, repo_clone_data):
     df_pr = pd.DataFrame.from_records(pr_sharings)
 
     df_commitshas = pd.DataFrame.from_records(
-        [(url,*idx_and_sha)
+        [(url, *idx_and_sha)
          for url, shas in commitsha_dict.items()
          for idx_and_sha in shas],
         columns=['URL', 'CommitIdx', 'Sha'],
         index='URL',
     )
-    df_pr_split = df_pr.drop(columns=['Sha'], errors='ignore').join(df_commitshas, on='URL')
+    df_pr_split = (
+        df_pr
+        # drop column df_commitshas would add
+        .drop(columns=['Sha'], errors='ignore')
+        # drop columns with large data (can later be 'join'-ed)
+        .drop(columns=['Title', 'Body'])
+        # merge 'Sha' for every individual commit in 'CommitSha' in PR
+        .join(df_commitshas, on='URL')
+    )
 
     grouped = df_pr.groupby(by=['RepoName'], dropna=False)
     df_repo = grouped.agg({
