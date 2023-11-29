@@ -9,3 +9,5 @@
 /pr_sharings_changes_survival_df.csv
 /pr_sharings_lines_survival_df.csv
 /pr_sharings_split_commit_df.csv
+/pr_sharings_split_commit_changes_survival_df.csv
+/pr_sharings_split_commit_lines_survival_df.csv
