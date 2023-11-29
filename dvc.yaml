@@ -86,6 +86,21 @@ stages:
       - data/interim/pr_sharings_changes_survival_df.csv
       - data/interim/pr_sharings_lines_survival_df.csv
 
+  pr_split_survival:
+    desc: 'Changes and lines survival (via blame) for pr sharings, all commits'
+    cmd: >-
+      python scripts/data/compute_changes_survival.py
+      data/interim/pr_sharings_split_commit_df.csv data/repositories_download_status.json
+      data/interim/pr_sharings_split_commit_changes_survival_df.csv
+      data/interim/pr_sharings_split_commit_lines_survival_df.csv
+    deps:
+      - scripts/data/compute_changes_survival.py
+      - data/repositories_download_status.json
+      - data/interim/pr_sharings_split_commit_df.csv
+    outs:
+      - data/interim/pr_sharings_split_commit_changes_survival_df.csv
+      - data/interim/pr_sharings_split_commit_lines_survival_df.csv
+
   repo_stats_git:
     desc: 'Repository stats from git for all cloned project repos'
     cmd: >-
