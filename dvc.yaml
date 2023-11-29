@@ -56,6 +56,7 @@ stages:
     outs:
       - data/interim/pr_sharings_df.csv
       - data/interim/pr_sharings_groupby_repo_df.csv
+      - data/interim/pr_sharings_split_commit_df.csv
 
   commit_survival:
     desc: 'Changes and lines survival (via blame) for latest commit sharings'
