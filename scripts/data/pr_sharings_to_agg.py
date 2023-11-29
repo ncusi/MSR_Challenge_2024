@@ -81,9 +81,11 @@ def process_pr_sharings(pr_sharings_path, repo_clone_data):
         https://github.com/NAIST-SE/DevGPT/blob/main/README.md#github-pull-request
     :param dict repo_clone_data: information extracted from <repositories.json>,
         used to add 'is_cloned' column to one of resulting dataframes
-    :return: sharings aggregated over commit (first dataframe), an over
-        repos (second dataframe in the tuple)
-    :rtype: (pd.DataFrame, pd.DataFrame)
+    :return: sharings aggregated over pull request (first dataframe),
+        and over repos (second dataframe in the tuple),
+        and sharings aggregated over pull request split into
+        individual commits (third dataframe)
+    :rtype: (pd.DataFrame, pd.DataFrame, pd.DataFrame)
     """
     with open(pr_sharings_path) as pr_sharings_file:
         pr_sharings = json.load(pr_sharings_file)
@@ -93,12 +95,29 @@ def process_pr_sharings(pr_sharings_path, repo_clone_data):
         sys.exit(ERROR_OTHER)
 
     pr_sharings = pr_sharings['Sources']
-    compute_commitsha_stats(pr_sharings)
+    commitsha_dict = compute_commitsha_stats(pr_sharings)
     retrieve_merge_commit_sha_for_pr(pr_sharings)
     compute_pr_state_stats(pr_sharings)
     compute_chatgpt_sharings_stats(pr_sharings)
 
     df_pr = pd.DataFrame.from_records(pr_sharings)
+
+    df_commitshas = pd.DataFrame.from_records(
+        [(url, *idx_and_sha)
+         for url, shas in commitsha_dict.items()
+         for idx_and_sha in shas],
+        columns=['URL', 'CommitIdx', 'Sha'],
+        index='URL',
+    )
+    df_pr_split = (
+        df_pr
+        # drop column df_commitshas would add
+        .drop(columns=['Sha'], errors='ignore')
+        # drop columns with large data (can later be 'join'-ed)
+        .drop(columns=['Title', 'Body'])
+        # merge 'Sha' for every individual commit in 'CommitSha' in PR
+        .join(df_commitshas, on='URL')
+    )
 
     grouped = df_pr.groupby(by=['RepoName'], dropna=False)
     df_repo = grouped.agg({
@@ -125,16 +144,21 @@ def process_pr_sharings(pr_sharings_path, repo_clone_data):
 
     add_is_cloned_column(df_repo, repo_clone_data)
 
-    return df_pr, df_repo
+    return df_pr, df_repo, df_pr_split
 
 
 def compute_commitsha_stats(the_sharings):
+    commitsha_dict = {}
     for source in tqdm(the_sharings, desc="source ('CommitSha')"):
         commitsha_list = source['CommitSha']
         del source['CommitSha']
 
         source['FirstCommitSha'] = commitsha_list[0]
         source['LastCommitSha'] = commitsha_list[-1]
+
+        commitsha_dict[source['URL']] = list(enumerate(commitsha_list))  # un-lazy
+
+    return commitsha_dict
 
 
 def retrieve_merge_commit_sha_for_pr(pr_sharings):
@@ -228,7 +252,7 @@ def main():
     pr_sharings_path = find_most_recent_pr_sharings(dataset_directory_path)
     print(f"Sharings for pr at '{pr_sharings_path}'", file=sys.stderr)
 
-    pr_df, repo_df = process_pr_sharings(pr_sharings_path, repo_clone_data)
+    pr_df, repo_df, pr_split_df = process_pr_sharings(pr_sharings_path, repo_clone_data)
     # write per-pr data
     pr_sharings_path = output_dir_path.joinpath('pr_sharings_df.csv')
     print(f"Writing {pr_df.shape} of per-pr sharings data "
@@ -239,6 +263,11 @@ def main():
     print(f"Writing {repo_df.shape} of repo-aggregated pr sharings data "
           f"to '{repo_sharings_path}'", file=sys.stderr)
     repo_df.to_csv(repo_sharings_path, index=True)
+    # write per-pr data, split into individual commits
+    pr_split_sharings_path = output_dir_path.joinpath('pr_sharings_split_commit_df.csv')
+    print(f"Writing {pr_split_df.shape} of per-pr sharings data, split into commits in pr, "
+          f"to '{pr_split_sharings_path}'", file=sys.stderr)
+    pr_split_df.to_csv(pr_split_sharings_path, index=False)
 
 
 if __name__ == '__main__':

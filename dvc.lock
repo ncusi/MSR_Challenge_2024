@@ -141,8 +141,8 @@ stages:
       size: 233264
     - path: scripts/data/pr_sharings_to_agg.py
       hash: md5
-      md5: b58c7b8cf3b61c70f4c1a889f7c813a9
-      size: 10293
+      md5: b01727f7136eed93a91157716a9b2eee
+      size: 11539
     outs:
     - path: data/interim/pr_sharings_df.csv
       hash: md5
@@ -152,6 +152,10 @@ stages:
       hash: md5
       md5: 5a9a8199defd70f663a4f534dfdfcc79
       size: 16720
+    - path: data/interim/pr_sharings_split_commit_df.csv
+      hash: md5
+      md5: 6e514d9c1ad1bf3877f2c4e2ba14e8f3
+      size: 1176177
   pr_survival:
     cmd: python scripts/data/compute_changes_survival.py data/interim/pr_sharings_df.csv
       data/repositories_download_status.json data/interim/pr_sharings_changes_survival_df.csv
@@ -178,3 +182,29 @@ stages:
       hash: md5
       md5: a272dfeade204bec879618eb71a22b65
       size: 47992080
+  pr_split_survival:
+    cmd: python scripts/data/compute_changes_survival.py data/interim/pr_sharings_split_commit_df.csv
+      data/repositories_download_status.json data/interim/pr_sharings_split_commit_changes_survival_df.csv
+      data/interim/pr_sharings_split_commit_lines_survival_df.csv
+    deps:
+    - path: data/interim/pr_sharings_split_commit_df.csv
+      hash: md5
+      md5: 6e514d9c1ad1bf3877f2c4e2ba14e8f3
+      size: 1176177
+    - path: data/repositories_download_status.json
+      hash: md5
+      md5: 8898a0ba57ae8a4a3874a500896de4de
+      size: 233264
+    - path: scripts/data/compute_changes_survival.py
+      hash: md5
+      md5: 874784aa8866c4f9a5d71f4796f53ade
+      size: 23482
+    outs:
+    - path: data/interim/pr_sharings_split_commit_changes_survival_df.csv
+      hash: md5
+      md5: 936dae4dc315e14aca3bae3f36063169
+      size: 1287882
+    - path: data/interim/pr_sharings_split_commit_lines_survival_df.csv
+      hash: md5
+      md5: 8f8932f77c14d26bbf65ad0153df5f1d
+      size: 149749534
