@@ -98,7 +98,8 @@ def process_pr_sharings(pr_sharings_path, repo_clone_data):
     commitsha_dict = compute_commitsha_stats(pr_sharings)
     retrieve_merge_commit_sha_for_pr(pr_sharings)
     compute_pr_state_stats(pr_sharings)
-    compute_chatgpt_sharings_stats(pr_sharings)
+    compute_chatgpt_sharings_stats(pr_sharings,
+                                   mentioned_property_values=['title', 'body', 'comments.body', 'reviews.body'])
 
     df_pr = pd.DataFrame.from_records(pr_sharings)
 

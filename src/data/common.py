@@ -107,7 +107,7 @@ class DownloadedRepositories:
             return None
 
 
-def compute_chatgpt_sharings_stats(the_sharings):
+def compute_chatgpt_sharings_stats(the_sharings, mentioned_property_values=None):
     """Replace 'ChatgptSharing' field by its stats / summary
 
     This summary includes the following fields:
@@ -122,8 +122,14 @@ def compute_chatgpt_sharings_stats(the_sharings):
       'Model' field was 'GPT-4', was ''Default (GPT-3.5)', or had other
       value, respectively
 
+    If `mentioned_property_values` is not note, for each value on this list,
+    the summary would include "<value>_count" field.
+
     :param dict the_sharings: the 'Sources' part of sharing from DevGPT dataset,
         read from the JSON file; is *modified* by function
+    :param mentioned_property_values: list of ChatgptSharing[].Mention.MentionedProperty
+        values to gather stats about, or None
+    :type mentioned_property_values: list[str] or None
     :return: modified input
     :rtype: dict
     """
@@ -140,6 +146,11 @@ def compute_chatgpt_sharings_stats(the_sharings):
         source['ModelGPT3.5'] = 0
         source['ModelOther'] = 0
         source['Status404'] = 0
+
+        if mentioned_property_values is not None:
+            for value in mentioned_property_values:
+                source[f"{value}_count"] = 0
+
         for chatgpt_sharing in chatgpt_sharings_list:
             # just in case value is null, or key is missing
             source['TotalNumberOfPrompts'] += chatgpt_sharing.get('NumberOfPrompts') or 0
@@ -161,7 +172,10 @@ def compute_chatgpt_sharings_stats(the_sharings):
                 conversations = chatgpt_sharing['Conversations']
                 source['NumberOfConversations'] += len(conversations)
 
-            # ...
+            if mentioned_property_values is not None and 'Mention' in chatgpt_sharing:
+                for value in mentioned_property_values:
+                    if chatgpt_sharing['Mention']['MentionedProperty'] == value:
+                        source[f"{value}_count"] += 1
 
     return the_sharings
 
