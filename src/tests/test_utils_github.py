@@ -1,7 +1,9 @@
 import os
 import unittest
 
-from src.utils.github import is_github, full_name_from_github_url
+import ghgql
+
+from src.utils.github import is_github, full_name_from_github_url, GITHUB_API_TOKEN
 from src.utils.github import (get_Github, get_github_repo, get_github_commit,
                               get_github_issue, get_github_pull_request,
                               get_github_repo_cached)
@@ -195,6 +197,49 @@ class NetworkedGitHubTestCase(unittest.TestCase):
         self.assertEqual('Fix broken urls in docstrings', pr.title, f"pull request title matches for {pr}")
         self.assertFalse(pr.draft, f"pull request {pr} is not draft")
         self.assertTrue(pr.merged, f"pull request {pr} is merged")
+
+
+@unittest.skipIf('SKIP_SLOW_TESTS' in os.environ, 'Skipping slow networked tests')
+@unittest.skipUnless(
+    can_connect_to_url('https://api.github.com/graphql', timeout=0.1),
+    'Skipping because of no access to https://api.github.com/graphql in 0.1 seconds'
+)
+class NetworkedGitHubGraphQLTestCase(unittest.TestCase):
+    """Includes those tests of `src.utils.github` that use GraphQL queries"""
+    ghapi = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        """Set-up GitHub GraphQL API client once for all tests"""
+        if GITHUB_API_TOKEN:
+            cls.ghapi = ghgql.GithubGraphQL(token=GITHUB_API_TOKEN)
+        else:
+            raise unittest.SkipTest("No GITHUB_API_TOKEN, required for GraphQL queries")
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        """Tear-down (close) GitHub GraphQL client after all tests"""
+        if cls.ghapi is not None:
+            cls.ghapi.close()
+
+    def test_rate_limits(self):
+        """Very simple test of basic GraphQL query, without any variables"""
+        query = """
+        query {
+            rateLimit {
+                limit
+                remaining
+                used
+            }
+        }
+        """
+        result = self.ghapi.query(query=query)
+        data = result['data']['rateLimit']
+
+        self.assertGreaterEqual(data['limit'], data['remaining'],
+                                "'limit' >= 'remaining'")
+        self.assertEqual(data['limit'], data['remaining'] + data['used'],
+                         "'limit' == 'remaining' + 'used'")
 
 
 if __name__ == '__main__':
