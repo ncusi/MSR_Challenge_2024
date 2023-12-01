@@ -4,6 +4,7 @@
 # external requirements
 PyGithub==2.1.1
 ghgql==1.0.6
+fnc==0.5.3
 pandas==2.1.3
 tqdm==4.66.1
 requests==2.31.0
