@@ -11,3 +11,5 @@
 /pr_sharings_split_commit_df.csv
 /pr_sharings_split_commit_changes_survival_df.csv
 /pr_sharings_split_commit_lines_survival_df.csv
+/issue_sharings_df.csv
+/issue_sharings_groupby_repo_df.csv
