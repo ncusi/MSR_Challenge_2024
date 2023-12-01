@@ -1,6 +1,8 @@
 import os
 import unittest
+from pprint import pprint
 
+import fnc
 import ghgql
 
 from src.utils.github import is_github, full_name_from_github_url, GITHUB_API_TOKEN
@@ -240,6 +242,43 @@ class NetworkedGitHubGraphQLTestCase(unittest.TestCase):
                                 "'limit' >= 'remaining'")
         self.assertEqual(data['limit'], data['remaining'] + data['used'],
                          "'limit' == 'remaining' + 'used'")
+
+    def test_retrieving_github_issue_closer(self):
+        """Test query to find how GitHub issue was closed
+
+        Based on https://stackoverflow.com/a/62294269/46058 response to
+        https://stackoverflow.com/questions/62293896/github-api-how-to-know-if-an-issue-was-closed-by-a-fork-pull-request
+        """
+        query = """
+        query ($owner: String!, $repo: String!, $issue: Int!) {
+          repository(name: $repo, owner: $owner) {
+            issue(number: $issue) {
+              timelineItems(itemTypes: CLOSED_EVENT, last: 1) {
+                nodes {
+                  ... on ClosedEvent {
+                    closer {
+                      __typename
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+        test_data = [
+            ('mui-org', 'material-ui', 19641, 'PullRequest'),  # Closing via pull request
+            ('rubinius', 'rubinius', 1536, 'Commit'),  # Closing via commit message
+            ('rubinius', 'rubinius', 3830, None),  # Closing via button
+        ]
+        for owner, repo, issue, expected in test_data:
+            with self.subTest("issue closer matches", expected=expected):
+                result = self.ghapi.query(query=query,
+                                          variables={'owner': owner, 'repo': repo, 'issue': issue})
+                has_closer = fnc.has('data.repository.issue.timelineItems.nodes[0].closer', result)
+                typename = fnc.get('data.repository.issue.timelineItems.nodes[0].closer.__typename', result)
+                self.assertTrue(has_closer, f"{owner}/{repo} has closer for #{issue}")
+                self.assertEqual(typename, expected, f"{owner}/{repo} closer for #{issue} matches")
 
 
 if __name__ == '__main__':
