@@ -141,8 +141,8 @@ stages:
       size: 233264
     - path: scripts/data/pr_sharings_to_agg.py
       hash: md5
-      md5: 3910194a9d08a3918cf037d0bd5d3fbb
-      size: 11652
+      md5: a0f9d5fae3236d03c1ccc124cc4c511a
+      size: 11648
     outs:
     - path: data/interim/pr_sharings_df.csv
       hash: md5
