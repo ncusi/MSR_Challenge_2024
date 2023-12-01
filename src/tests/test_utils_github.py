@@ -1,6 +1,5 @@
 import os
 import unittest
-from pprint import pprint
 
 import fnc
 import ghgql
