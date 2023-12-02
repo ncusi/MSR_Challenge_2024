@@ -59,7 +59,7 @@ ERROR_OTHER = 2
 
 
 def process_pr_sharings(pr_sharings_path, repo_clone_data):
-    """Read commit sharings, convert to dataframe, and aggregate over repos
+    """Read pr sharings, convert to dataframe, and aggregate over repos
 
     In DevGPT GitHub PR sharings, there are a few fields that are not scalar
     valued. One of them is 'ChaptgptSharing' field.  To convert ChatGPT sharing

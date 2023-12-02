@@ -58,6 +58,20 @@ stages:
       - data/interim/pr_sharings_groupby_repo_df.csv
       - data/interim/pr_sharings_split_commit_df.csv
 
+  issue_agg:
+    desc: 'Latest issue sharings to CSV + per-project aggregates'
+    cmd: >-
+      python scripts/data/issue_sharings_to_agg.py
+      data/external/DevGPT/ data/repositories_download_status.json
+      data/interim/
+    deps:
+      - scripts/data/issue_sharings_to_agg.py
+      - data/external/DevGPT/
+      - data/repositories_download_status.json
+    outs:
+      - data/interim/issue_sharings_df.csv
+      - data/interim/issue_sharings_groupby_repo_df.csv
+
   commit_survival:
     desc: 'Changes and lines survival (via blame) for latest commit sharings'
     cmd: >-
@@ -100,6 +114,21 @@ stages:
     outs:
       - data/interim/pr_sharings_split_commit_changes_survival_df.csv
       - data/interim/pr_sharings_split_commit_lines_survival_df.csv
+
+  issue_survival:
+    desc: 'Changes and lines survival (via blame) for latest issue sharings'
+    cmd: >-
+      python scripts/data/compute_changes_survival.py
+      data/interim/issue_sharings_df.csv data/repositories_download_status.json
+      data/interim/issue_sharings_changes_survival_df.csv
+      data/interim/issue_sharings_lines_survival_df.csv
+    deps:
+      - scripts/data/compute_changes_survival.py
+      - data/repositories_download_status.json
+      - data/interim/issue_sharings_df.csv
+    outs:
+      - data/interim/issue_sharings_changes_survival_df.csv
+      - data/interim/issue_sharings_lines_survival_df.csv
 
   repo_stats_git:
     desc: 'Repository stats from git for all cloned project repos'
