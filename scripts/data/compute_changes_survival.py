@@ -259,7 +259,7 @@ def process_commit_changed_lines(repo: GitRepo,
     for change_path, change_lines_list in survival_info.items():
         for change_line_info in change_lines_list:
             if 'previous' in change_line_info:
-                prev_commit, prev_file = change_line_info['previous'].split(' ')
+                prev_commit, prev_file = change_line_info['previous'].split(' ', maxsplit=1)
                 change_line_info['previous_commit'] = prev_commit
                 change_line_info['previous_filename'] = prev_file
 
