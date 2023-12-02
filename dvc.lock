@@ -234,3 +234,29 @@ stages:
       hash: md5
       md5: 4e08f0712c3675e8fd26d7ae1e141e45
       size: 28098
+  issue_survival:
+    cmd: python scripts/data/compute_changes_survival.py data/interim/issue_sharings_df.csv
+      data/repositories_download_status.json data/interim/issue_sharings_changes_survival_df.csv
+      data/interim/issue_sharings_lines_survival_df.csv
+    deps:
+    - path: data/interim/issue_sharings_df.csv
+      hash: md5
+      md5: e4d5790aa7222789d42f194aac59bf9b
+      size: 717771
+    - path: data/repositories_download_status.json
+      hash: md5
+      md5: 8898a0ba57ae8a4a3874a500896de4de
+      size: 233264
+    - path: scripts/data/compute_changes_survival.py
+      hash: md5
+      md5: 39fec757150a635cf9a688d999c7d6f2
+      size: 23494
+    outs:
+    - path: data/interim/issue_sharings_changes_survival_df.csv
+      hash: md5
+      md5: e8ad8de09bb685d32ee8ffdfcfcb87ef
+      size: 103948
+    - path: data/interim/issue_sharings_lines_survival_df.csv
+      hash: md5
+      md5: c11ec58c1726f10cf9226deabca1476a
+      size: 21003858
