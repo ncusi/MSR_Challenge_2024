@@ -23,13 +23,13 @@ stages:
       nfiles: 65
     - path: scripts/data/download_repositories.py
       hash: md5
-      md5: ecf6bc29c934494835f8117b203198c2
-      size: 7849
+      md5: 2f16f1af2268da2004038964c39e9732
+      size: 8022
     outs:
     - path: data/repositories_download_status.json
       hash: md5
-      md5: 8898a0ba57ae8a4a3874a500896de4de
-      size: 233264
+      md5: 209eadc84dbf7e478ebdd113bfb5c51a
+      size: 452090
   commit_agg:
     cmd: python scripts/data/commit_sharings_to_agg.py data/external/DevGPT/ data/repositories_download_status.json
       data/interim/
