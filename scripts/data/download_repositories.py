@@ -17,7 +17,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from src.data.sharings import find_sharings_files
+from src.data.sharings import find_sharings_files, SharingsPaths
 from src.utils.functools import timed
 from src.utils.git import GitRepo
 
@@ -180,17 +180,19 @@ def main():
 
     print(f"Reading data about dataset from '{dataset_directory_path}'...", file=sys.stderr)
 
-    commit_sharings_paths, issue_sharings_paths, pr_sharings_paths = find_sharings_files(dataset_directory_path)
+    sharings_paths: SharingsPaths = find_sharings_files(dataset_directory_path)
 
-    commit_df = combine_sharings(commit_sharings_paths)
-    issue_df = combine_sharings(issue_sharings_paths)
-    pr_df = combine_sharings(pr_sharings_paths)
+    commit_df = combine_sharings(sharings_paths.commit_sharings_paths)
+    issue_df = combine_sharings(sharings_paths.issue_sharings_paths)
+    pr_df = combine_sharings(sharings_paths.pr_sharings_paths)
+    file_df = combine_sharings(sharings_paths.file_sharings_paths)
 
     commit_repositories = list(commit_df['RepoName'].unique())
     issue_repositories = list(issue_df['RepoName'].unique())
     pr_repositories = list(pr_df['RepoName'].unique())
+    file_repositories = list(file_df['RepoName'].unique())
 
-    repositories = list(set(commit_repositories + issue_repositories + pr_repositories))
+    repositories = list(set(commit_repositories + issue_repositories + pr_repositories + file_repositories))
 
     print(f"Cloning {len(repositories)} repositories into '{repositories_path}'...", file=sys.stderr)
     cloned_data = download_repositories(repositories, repositories_path)

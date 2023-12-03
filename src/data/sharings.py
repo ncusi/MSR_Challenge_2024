@@ -10,16 +10,17 @@ from src.data.common import ERROR_OTHER
 
 class SharingsPaths(NamedTuple):
     """Lists of different DevGPT sharings files"""
-    commit_sharings_path: list[PathLike]
-    issue_sharings_path: list[PathLike]
+    commit_sharings_paths: list[PathLike]
+    issue_sharings_paths: list[PathLike]
     pr_sharings_paths: list[PathLike]
+    file_sharings_paths: list[PathLike]
 
 
 def find_sharings_files(dataset_path):
-    """Finds all files with issue, commit, and pr sharings in DevGPT dataset
+    """Finds all files with issue, commit, pr, and file sharings in DevGPT dataset
 
     :param Path dataset_path: path to directory with DevGPT dataset
-    :return: tuple of lists of file paths with sharings
+    :return: NamedTuple of lists of file paths with sharings
     :rtype: SharingsPaths
     """
     snapshot_paths = []
@@ -29,6 +30,7 @@ def find_sharings_files(dataset_path):
     commit_sharings_paths = []
     issue_sharings_paths = []
     pr_sharings_paths = []
+    file_sharings_paths = []
     for snapshot_path in snapshot_paths:
         snapshot_content_paths = list(snapshot_path.iterdir())
         for snapshot_content_path in snapshot_content_paths:
@@ -38,8 +40,13 @@ def find_sharings_files(dataset_path):
                 commit_sharings_paths.append(snapshot_content_path)
             if 'pr_sharings.json' in str(snapshot_content_path):
                 pr_sharings_paths.append(snapshot_content_path)
+            if 'file_sharings.json' in str(snapshot_content_path):
+                file_sharings_paths.append(snapshot_content_path)
 
-    return SharingsPaths(commit_sharings_paths, issue_sharings_paths, pr_sharings_paths)
+    return SharingsPaths(commit_sharings_paths,
+                         issue_sharings_paths,
+                         pr_sharings_paths,
+                         file_sharings_paths)
 
 
 def find_most_recent_sharings_files(dataset_path, verbose=True):
