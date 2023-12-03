@@ -118,6 +118,19 @@ def find_most_recent_issue_sharings(dataset_directory_path, verbose=True):
     return find_most_recent_sharings_files(dataset_directory_path, verbose)['issue']
 
 
+def find_most_recent_file_sharings(dataset_directory_path, verbose=True):
+    """Find file sharings from most recent snapshot in DevGPT dataset
+
+    :param Path dataset_directory_path: path to directory with DevGPT dataset
+    :param bool verbose: whether to print debugging-like information,
+        `true` by default
+    :return: path to most recent issue sharings file,
+        for example 'snapshot_20231012/20231012_234250_file_sharings.json'
+    :rtype: Path
+    """
+    return find_most_recent_sharings_files(dataset_directory_path, verbose)['file']
+
+
 def sharings_repo_list(sharings_path):
     """List all different 'RepoName' that can be found in DevGPT sharings
 
