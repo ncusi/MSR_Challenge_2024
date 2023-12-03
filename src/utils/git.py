@@ -435,7 +435,7 @@ class GitRepo:
         """Retrieve status of file changes at given revision in repo
 
         It returns in a structured way information equivalent to the one
-        from calling 'git diff --file-status -r'.
+        from calling 'git diff --name-status -r'.
 
         Example output:
             {
@@ -906,15 +906,24 @@ class GitRepo:
             output
         )
 
-    def changes_survival(self, commit, prev=None):
+    def changes_survival(self, commit, prev=None, addition_optim=False):
         lines_survival = {}
         all_commits_data = {}
+        diff_stat = {}
+
+        if addition_optim:
+            diff_stat = self.diff_file_status(commit, prev)
 
         changes_info = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
         for file_path, line_extents in changes_info.items():
             if not line_extents:
                 # empty changes, for example pure rename
                 continue
+
+            # if file was added in commit, blame whole file
+            if addition_optim:
+                if (None, file_path) in diff_stat:  # pure addition
+                    line_extents = None  # blame whole file
 
             commits_data, lines_data = self.reverse_blame(commit, file_path,
                                                           line_extents=line_extents)
