@@ -175,7 +175,7 @@ def get_hunk_images(hunk):
     return preimage, postimage
 
 
-def get_max_coverage(image, conv):
+def get_max_coverage(image, conv, Compare = CompareFragments):
     # iterate over conversation
     m_anwser = Compare(image)
 
