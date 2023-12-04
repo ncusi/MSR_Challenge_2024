@@ -14,7 +14,7 @@ From https://github.com/NAIST-SE/DevGPT/blob/main/README.md#github-issue
 - 'RepoName': Name of the repository that contains this issue
   (full repo name: {{owner}}/{{repo}}, e.g. "dotCMS/core")
 - 'RepoLanguage': Primary programming language of the repository that contains
-  this pull request. NOTE: it can be null when this repository does not contain
+  this issue. NOTE: it can be null when this repository does not contain
   any code (e.g. "C++", "Python", "HTML",...)
 - 'Number': Issue number of this issue (that is, {{issue_number}} in URL)
 - 'Title': Title of this issue (e.g. "Implement proper error handling")
@@ -24,7 +24,7 @@ From https://github.com/NAIST-SE/DevGPT/blob/main/README.md#github-issue
 - 'ClosedAt': When this issue was closed
   NOTE: it can be null when this issue is not closed
 - 'UpdatedAt': When the latest update of this issue occurred
-- 'State': The state of this pull request (i.e., OPEN, CLOSED)
+- 'State': The state of this issue (i.e., OPEN, CLOSED)
 - 'ChatgptSharing':	A *list* of ChatGPT link mentions.
 
 Example:
@@ -63,9 +63,6 @@ def process_issue_sharings(issue_sharings_path, repo_clone_data):
     to dataframe, values contained in this field needs to be summarized into
     a few scalars (see docstring for :func:`compute_chatgpt_sharings_stats`).
 
-    TODO: Because there is no 'Sha' of commit that closes the issue,
-    it needs to be found with the help of GitHub API.
-
     Additionally, an aggregate over repositories is computed, and also
     returned.  This aggregate dataframe included basic information about
     the repository, and the summary of the summary of non-scalar fields.
@@ -75,7 +72,7 @@ def process_issue_sharings(issue_sharings_path, repo_clone_data):
         https://github.com/NAIST-SE/DevGPT/blob/main/README.md#github-issue
     :param dict repo_clone_data: information extracted from <repositories.json>,
         used to add 'is_cloned' column to one of resulting dataframes
-    :return: sharings aggregated over pull request (first dataframe),
+    :return: sharings aggregated over issue (first dataframe),
         and over repos (second dataframe in the tuple)
     :rtype: (pd.DataFrame, pd.DataFrame)
     """
