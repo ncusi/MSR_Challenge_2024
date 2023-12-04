@@ -3,6 +3,7 @@ import re
 from difflib import SequenceMatcher, get_close_matches
 
 from unidiff import Hunk
+from joblib import Parallel, delayed
 
 
 def to_str(self):
@@ -40,10 +41,10 @@ def get_close_matches3(word, pos, n, cutoff):
             if r > match_size:
                 match_size = r
                 match_word = p
-            if r >= cutoff:
+            if r >= cutoff and len(match_word.strip()) > 0:
                 return match_word
 
-    if match_size == 0 or match_size < cutoff:
+    if match_size == 0 or match_size < cutoff or len(match_word.strip()) == 0:
         return None
 
     return match_word
@@ -70,8 +71,9 @@ class CompareBase:
 
 
 class CompareLines(CompareBase):
-    def __init__(self, image, lines=False):
+    def __init__(self, image, lines=False, treshold=0.5):
         super().__init__(image, lines)
+        self.treshold = treshold
 
     def compare(self, b, pno, lno=None):
         a = self.simage
@@ -81,12 +83,16 @@ class CompareLines(CompareBase):
     def final(self):
         chatl = []
         for chat in self.chats:
+            #chatl.extend([s.strip() for s in chat.splitlines() if len(s.strip())>0])
             chatl.extend(chat.splitlines())
 
         ret = []
 
         for line in self.image:
-            m = get_close_matches3(str(line), chatl, 1, 0.6)
+            if len(str(line).strip())==0:
+                continue
+
+            m = get_close_matches3(str(line), chatl, 1, self.treshold)
             if m:
                 ret.append(line.diff_line_no)
 
@@ -106,6 +112,24 @@ class CompareLinesFragmentTreshold(CompareLines):
         if s.real_quick_ratio() >= 0.1 and s.quick_ratio() >= 0.1 and s.ratio() >= 0.1:
             self.seq_match = s
             self.chats.append(b)
+
+class CompareTopFragments(CompareBase):
+    def __init__(self, image, lines=False):
+        super().__init__(image, lines)
+
+    def compare(self, b, pno, lno=None):
+        a = self.simage
+        s = SequenceMatcher(None, a, b)
+
+        # Max version
+        if s.real_quick_ratio() >= self.pos["r"] and s.quick_ratio() >= self.pos["r"]:
+            r = s.ratio()
+            if r > self.pos["r"]:
+                self.pos = {"r": r, "p": pno}
+                self.seq_match = s
+                self.chat = b
+                if self.lines:
+                    self.pos["l"] = lno
 
 
 class CompareFragments(CompareBase):
@@ -141,26 +165,6 @@ class CompareFragments(CompareBase):
 
         return ret
 
-    # alternate version
-    def final(self):
-        # if not self.seq_match:
-        #     return []
-
-        chatl = []
-        for chat in self.chats:
-            chatl.extend(chat.splitlines())
-
-        ret = []
-
-        for line in self.image:
-            # m = get_close_matches(str(line), chatl, 1, 0.5)
-            m = get_close_matches3(str(line), chatl, 1, 0.6)
-            if m:
-                ret.append(line.diff_line_no)
-
-        return ret
-
-
 def get_hunk_images(hunk):
     postimage = Hunk()
     preimage = Hunk()
@@ -178,9 +182,7 @@ def get_hunk_images(hunk):
 def get_max_coverage(image, conv, Compare = CompareFragments):
     # iterate over conversation
     m_anwser = Compare(image)
-
     m_prompt = Compare(image)
-
     m_loc = Compare(image, lines=True)
 
     for pno, prompt in enumerate(conv):
@@ -195,7 +197,44 @@ def get_max_coverage(image, conv, Compare = CompareFragments):
     return {"P": m_prompt.final(), "A": m_anwser.final(), "L": m_loc.final()}
 
 
-def diff_to_conversation(diff, conv, debug=False):
+def diff_to_conversation_file(file, diff, conv, debug=False, compare = CompareFragments):
+
+    ret = {}
+
+    ret["ALL"] = {"coverage": 0, "all": 0, "lines": []}
+
+    fn = file.source_file
+
+    if debug:
+        ret[fn] = {}
+
+    for i, hunk in enumerate(file):
+        preimage, postimage = get_hunk_images(hunk)
+
+
+        pre = get_max_coverage(preimage, conv["Conversations"], Compare=compare)
+        post = get_max_coverage(postimage, conv["Conversations"], Compare=compare)
+
+        ret_lines = []
+        ret_lines.extend(post["A"])
+        ret_lines.extend(post["L"])
+        ret_lines = set(ret_lines)
+        # TODO: check how many remove lines from 'P'
+        # that are exactly the same as in 'A' + 'L'.
+        # this has to be done on source lines and may be expensive
+
+        # ret_lines = set(ret_lines).union(set(post['P']))
+        ret["ALL"]["coverage"] += len(ret_lines)
+        ret["ALL"]["all"] += len([l for l in postimage if len(str(l).strip())>0])
+        ret["ALL"]["lines"].append(list(ret_lines))
+
+        if debug:
+            ret[fn][i] = {"pre": pre, "post": post}
+            ret[fn][i]["lines"] = list(ret_lines)
+
+        return ret
+
+def diff_to_conversation(diff, conv, debug=False, compare = CompareFragments):
     ret = {}
 
     ret["ALL"] = {"coverage": 0, "all": 0, "lines": []}
@@ -203,31 +242,15 @@ def diff_to_conversation(diff, conv, debug=False):
     if "Conversations" not in conv:
         return ret
 
+    ret_list =[]
     for file in diff:
-        fn = file.source_file
-        ret[fn] = {}
+        ret_list.append(diff_to_conversation_file(file, diff, conv, debug, compare))
+    #ret_list = Parallel(n_jobs=-1)(delayed(diff_to_conversation_file)(file, diff, conv, debug, compare) for file in diff)
 
-        for i, hunk in enumerate(file):
-            preimage, postimage = get_hunk_images(hunk)
+    for r in ret_list:
+        ret["ALL"]["coverage"] += r['ALL']["coverage"]
+        ret["ALL"]["all"] += r['ALL']["all"]
+        ret["ALL"]["lines"].extend(r['ALL']["lines"])
 
-            pre = get_max_coverage(preimage, conv["Conversations"])
-            post = get_max_coverage(postimage, conv["Conversations"])
-
-            ret_lines = []
-            ret_lines.extend(post["A"])
-            ret_lines.extend(post["L"])
-            ret_lines = set(ret_lines)
-            # TODO: check how many remove lines from 'P'
-            # that are exactly the same as in 'A' + 'L'.
-            # this has to be done on source lines and may be expensive
-
-            # ret_lines = set(ret_lines).union(set(post['P']))
-            ret["ALL"]["coverage"] += len(ret_lines)
-            ret["ALL"]["all"] += len(postimage)
-            ret["ALL"]["lines"].append(list(ret_lines))
-
-            if debug:
-                ret[fn][i] = {"pre": pre, "post": post}
-                ret[fn][i]["lines"] = list(ret_lines)
 
     return ret
