@@ -114,6 +114,7 @@ class CompareLinesFragmentTreshold(CompareLines):
             self.chats.append(b)
 
 class CompareTopFragments(CompareBase):
+    # Work in progress
     def __init__(self, image, lines=False):
         super().__init__(image, lines)
 
@@ -159,7 +160,7 @@ class CompareFragments(CompareBase):
         ret = []
 
         for line in self.image:
-            m = get_close_matches(str(line), chatl, 1, 0.6)
+            m = get_close_matches(str(line), chatl, 1, 0.5)
             if m:
                 ret.append(line.diff_line_no)
 
@@ -201,7 +202,7 @@ def diff_to_conversation_file(file, diff, conv, debug=False, compare = CompareFr
 
     ret = {}
 
-    ret["ALL"] = {"coverage": 0, "all": 0, "lines": []}
+    ret["ALL"] = {"coverage": 0, "all": 0, "lines": set(), "preimage":set(), "preimage_all":0, "preimage_coverage":0}
 
     fn = file.source_file
 
@@ -225,32 +226,42 @@ def diff_to_conversation_file(file, diff, conv, debug=False, compare = CompareFr
 
         # ret_lines = set(ret_lines).union(set(post['P']))
         ret["ALL"]["coverage"] += len(ret_lines)
-        ret["ALL"]["all"] += len([l for l in postimage if len(str(l).strip())>0])
-        ret["ALL"]["lines"].append(list(ret_lines))
+        #ret["ALL"]["all"] += len([l for l in postimage if len(str(l).strip())>0])
+        ret["ALL"]["all"] += len(postimage)
+        ret["ALL"]["lines"] = ret["ALL"]["lines"].union(ret_lines)
+
+        ret["ALL"]["preimage"] = ret["ALL"]["preimage"].union(set(pre["P"])) # Only prompt for pre
+        ret["ALL"]["preimage_coverage"] += len(pre["P"]) # Only prompt for pre
+        ret["ALL"]["preimage_all"] += len(preimage)
 
         if debug:
             ret[fn][i] = {"pre": pre, "post": post}
             ret[fn][i]["lines"] = list(ret_lines)
 
-        return ret
+    return ret
 
 def diff_to_conversation(diff, conv, debug=False, compare = CompareFragments):
     ret = {}
 
-    ret["ALL"] = {"coverage": 0, "all": 0, "lines": []}
+    ret["ALL"] = {"coverage": 0, "all": 0, "lines": [], 'preimage':[], 'preimage_all':0, 'preimage_coverage':0}
 
     if "Conversations" not in conv:
         return ret
 
     ret_list =[]
-    for file in diff:
-        ret_list.append(diff_to_conversation_file(file, diff, conv, debug, compare))
-    #ret_list = Parallel(n_jobs=-1)(delayed(diff_to_conversation_file)(file, diff, conv, debug, compare) for file in diff)
+    #for file in diff:
+    #    ret_list.append(diff_to_conversation_file(file, diff, conv, debug, compare))
+    ret_list = Parallel(n_jobs=-1)(delayed(diff_to_conversation_file)(file, diff, conv, debug, compare) for file in diff)
 
     for r in ret_list:
         ret["ALL"]["coverage"] += r['ALL']["coverage"]
         ret["ALL"]["all"] += r['ALL']["all"]
+
+        ret["ALL"]["preimage_coverage"] += r['ALL']["preimage_coverage"]
+        ret["ALL"]["preimage_all"] += r['ALL']["preimage_all"]
+
         ret["ALL"]["lines"].extend(r['ALL']["lines"])
+        ret["ALL"]["preimage"].extend(r['ALL']["preimage"])
 
 
     return ret
