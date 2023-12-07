@@ -116,13 +116,15 @@ def compute_chatgpt_sharings_stats(the_sharings, mentioned_property_values=None)
 
     This summary includes the following fields:
 
-    - 'NumberOfChaptgptSharings'
+    - 'NumberOfChatgptSharings'
     - 'TotalNumberOfPrompts'
     - 'TotalTokensOfPrompts'
     - 'TotalTokensOfAnswers'
-    - 'NumberOfConversations'
-    - 'Status404' - in how many cases 'Status' was 404 (Not Found)
-    - 'ModelGPT4', 'ModelGPT3.5', 'ModelOther' - count the cases where
+    - 'NumberOfConversations': sum of lengths of 'Conversation'
+    - 'TotalNumberOfCodeBlocks': sum of lengths of 'ListOfCode'
+      for each 'Conversation' in 'ChatgptSharing'
+    - 'Status404': in how many cases 'Status' was 404 (Not Found)
+    - 'ModelGPT4', 'ModelGPT3.5', 'ModelOther': count the cases where
       'Model' field was 'GPT-4', was ''Default (GPT-3.5)', or had other
       value, respectively
 
@@ -146,6 +148,7 @@ def compute_chatgpt_sharings_stats(the_sharings, mentioned_property_values=None)
         source['TotalTokensOfPrompts'] = 0
         source['TotalTokensOfAnswers'] = 0
         source['NumberOfConversations'] = 0
+        source['TotalNumberOfCodeBlocks'] = 0
         source['ModelGPT4'] = 0
         source['ModelGPT3.5'] = 0
         source['ModelOther'] = 0
@@ -175,6 +178,9 @@ def compute_chatgpt_sharings_stats(the_sharings, mentioned_property_values=None)
             if 'Conversations' in chatgpt_sharing and chatgpt_sharing['Conversations'] is not None:
                 conversations = chatgpt_sharing['Conversations']
                 source['NumberOfConversations'] += len(conversations)
+
+                for conv in conversations:
+                    source['TotalNumberOfCodeBlocks'] += len(conv['ListOfCode'])
 
             if mentioned_property_values is not None and 'Mention' in chatgpt_sharing:
                 for value in mentioned_property_values:
