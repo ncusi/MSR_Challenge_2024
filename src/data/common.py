@@ -11,7 +11,7 @@ ERROR_ARGS = 1
 ERROR_OTHER = 2
 
 
-def load_repositories_json(repositories_info_path: Path) -> dict:
+def load_repositories_json(repositories_info_path: Path, verbose: bool = True) -> dict:
     """Load <repositories.json> and convert into dict with project name as key
 
     The returned dict has the following structure:
@@ -25,13 +25,15 @@ def load_repositories_json(repositories_info_path: Path) -> dict:
     }
 
     :param Path repositories_info_path:  path to <repositories.json> file
+    :param bool verbose: whether to print progress messages
     :return: data extracted from <repositories.json> file
     :rtype: dict
     """
     repo_clone_info = load_json_with_checks(repositories_info_path,
                                             file_descr="<repositories.json>",
                                             data_descr="info about cloned repos",
-                                            err_code=ERROR_ARGS, expected_type=list)
+                                            err_code=ERROR_ARGS, expected_type=list,
+                                            verbose=verbose)
     repo_clone_data = {
         repo_info['repository']: {
             key: value
@@ -76,7 +78,8 @@ class DownloadedRepositories:
         >>> the_repo = all_repos.repo('sqlalchemy/sqlalchemy')
         >>> curr_diff = the_repo.unidiff('HEAD^^^^^')
     """
-    def __init__(self, repositories_info_path: Path = Path('data/repositories_download_status.json')):
+    def __init__(self, repositories_info_path: Path = Path('data/repositories_download_status.json'),
+                 verbose: bool = True):
         """Create helper object, by providing it with path to <repositories.json>
 
         The `repositories_info_path` should point to JSON file with information
@@ -84,9 +87,10 @@ class DownloadedRepositories:
         script (the "clone_repos" stage in dvc.yaml).
 
         :param Path repositories_info_path: path to <repositories.json> file
+        :param bool verbose: whether to print progress messages
         """
         self.repositories_info_path = repositories_info_path
-        self.repo_clone_data = load_repositories_json(repositories_info_path)
+        self.repo_clone_data = load_repositories_json(repositories_info_path, verbose=verbose)
 
     def repo(self, repo_name: str) -> GitRepo|None:
         """Create GitRepo object for cloned 'RepoName' project

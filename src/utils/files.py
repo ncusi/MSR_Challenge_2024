@@ -114,7 +114,8 @@ def load_properties_lite(filepath, sep='=', quotes='"', strip_quotes=True):
     return props
 
 
-def load_json_with_checks(filepath, file_descr, data_descr, err_code, expected_type=list):
+def load_json_with_checks(filepath, file_descr, data_descr, err_code,
+                          expected_type=list, verbose=True):
     """Load JSON file, checking for errors, and exiting with `err_code` on errors
 
     Checks if given path is a directory, if a file exists, and if file is a valid
@@ -130,6 +131,7 @@ def load_json_with_checks(filepath, file_descr, data_descr, err_code, expected_t
     :param str data_descr: description of data in JSON file, for example "projects data"
     :param int err_code: what error code to use in `sys.exit()` on error
     :param type expected_type: what type is required for top object in JSON
+    :param bool verbose: whether to print progress messages
     :return: data from JSON file
     :rtype: list[dict] or dict
     """
@@ -138,7 +140,8 @@ def load_json_with_checks(filepath, file_descr, data_descr, err_code, expected_t
         sys.exit(err_code)
 
     try:
-        print(f"Loading {data_descr} from '{filepath}'...", file=sys.stderr)
+        if verbose:
+            print(f"Loading {data_descr} from '{filepath}'...", file=sys.stderr)
         with filepath.open() as fp:
             result = json.load(fp)
     except FileNotFoundError as err:
