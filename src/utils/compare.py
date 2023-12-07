@@ -71,9 +71,9 @@ class CompareBase:
 
 
 class CompareLines(CompareBase):
-    def __init__(self, image, lines=False, treshold=0.5):
+    def __init__(self, image, lines=False, threshold=0.5):
         super().__init__(image, lines)
-        self.treshold = treshold
+        self.threshold = threshold
 
     def compare(self, b, pno, lno=None):
         a = self.simage
@@ -92,14 +92,14 @@ class CompareLines(CompareBase):
             if len(str(line).strip())==0:
                 continue
 
-            m = get_close_matches3(str(line), chatl, 1, self.treshold)
+            m = get_close_matches3(str(line), chatl, 1, self.threshold)
             if m:
                 ret.append(line.diff_line_no)
 
         return ret
 
 
-class CompareLinesFragmentTreshold(CompareLines):
+class CompareLinesFragmentThreshold(CompareLines):
     def __init__(self, image, lines=False):
         super().__init__(image, lines)
 
@@ -112,6 +112,7 @@ class CompareLinesFragmentTreshold(CompareLines):
         if s.real_quick_ratio() >= 0.1 and s.quick_ratio() >= 0.1 and s.ratio() >= 0.1:
             self.seq_match = s
             self.chats.append(b)
+
 
 class CompareTopFragments(CompareBase):
     # Work in progress
@@ -166,6 +167,7 @@ class CompareFragments(CompareBase):
 
         return ret
 
+
 def get_hunk_images(hunk):
     postimage = Hunk()
     preimage = Hunk()
@@ -182,7 +184,7 @@ def get_hunk_images(hunk):
 
 def get_max_coverage(image, conv, Compare = CompareFragments):
     # iterate over conversation
-    m_anwser = Compare(image)
+    m_answer = Compare(image)
     m_prompt = Compare(image)
     m_loc = Compare(image, lines=True)
 
@@ -190,19 +192,26 @@ def get_max_coverage(image, conv, Compare = CompareFragments):
         a, b = prompt["Prompt"], prompt["Answer"]
 
         m_prompt.compare(a, pno)
-        m_anwser.compare(b, pno)
+        m_answer.compare(b, pno)
 
         for lno, loc in enumerate(prompt["ListOfCode"]):
             m_loc.compare(loc["Content"], pno, lno)
 
-    return {"P": m_prompt.final(), "A": m_anwser.final(), "L": m_loc.final()}
+    return {"P": m_prompt.final(), "A": m_answer.final(), "L": m_loc.final()}
 
 
 def diff_to_conversation_file(file, diff, conv, debug=False, compare = CompareFragments):
 
-    ret = {}
-
-    ret["ALL"] = {"coverage": 0, "all": 0, "lines": set(), "preimage":set(), "preimage_all":0, "preimage_coverage":0}
+    ret = {
+        "ALL": {
+            "coverage": 0,
+            "all": 0,
+            "lines": set(),
+            "preimage": set(),
+            "preimage_all": 0,
+            "preimage_coverage": 0,
+        }
+    }
 
     fn = file.source_file
 
@@ -239,6 +248,7 @@ def diff_to_conversation_file(file, diff, conv, debug=False, compare = CompareFr
             ret[fn][i]["lines"] = list(ret_lines)
 
     return ret
+
 
 def diff_to_conversation(diff, conv, debug=False, compare = CompareFragments):
     ret = {}
