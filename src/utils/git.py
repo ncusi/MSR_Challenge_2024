@@ -20,6 +20,7 @@ error (like incorrect repository path, or incorrect commit)!!!
 """
 import re
 import subprocess
+from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum
 from operator import attrgetter
@@ -27,6 +28,7 @@ from os import PathLike
 from pathlib import Path
 from typing import overload, Literal, NamedTuple, Tuple
 
+from unidiff.patch import Line as PatchLine
 from unidiff import PatchSet
 
 
@@ -564,12 +566,45 @@ class GitRepo:
             return diff_output
 
     def changed_lines_extents(self, commit='HEAD', prev=None, side=DiffSide.POST):
+        """List target line numbers of changed files as extents, for each changed file
+
+        For each changed file that appears in `side` side of the diff between
+        given commits, it returns list of `side` line numbers (e.g. target line
+        numbers for post=DiffSide.POST).
+
+        Line numbers are returned compressed as extents, that is list of
+        tuples of start and end range.  For example, if target line numbers
+        would be [1, 2, 3, 7, 10, 11], then their extent list would be
+        [(1, 3), (7, 7), (10, 11)].
+
+        To make it easier to mesh with other parts of computation, and to
+        avoid reparsing diffs, also return parsed patch lines (diff lines).
+
+        Uses :func:`GitRepo.unidiff` to parse git diff between `prev` and `commit`.
+
+        Used by :func:`GitRepo.changes_survival`.
+
+        :param str commit: later (second) of two commits to compare,
+            defaults to 'HEAD', that is the current commit
+        :param str or None prev: earlier (first) of two commits to compare,
+            defaults to None, which means comparing to parent of `commit`
+        :param DiffSide side: Whether to use names of files in post-image (after changes)
+            with side=DiffSide.POST, or pre-image names (before changes)
+            with side=DiffSide.PRE.  Renames are detected by Git.
+            Defaults to DiffSide.POST, which is currently the only value
+            supported.
+        :return: two dicts, with changed files names as keys,
+            first with information about change lines extents,
+            second with parsed change lines (only for added lines)
+        :rtype: (dict[str, list[tuple[int, int]]], dict[str, PatchLine])
+        """
         # TODO: implement also for DiffSide.PRE
         if side != DiffSide.POST:
-            raise NotImplementedError(f"GitRepo.changed_lines: unsupported side={side} parameter")
+            raise NotImplementedError(f"GitRepo.changed_lines_extents: unsupported side={side} parameter")
 
         patch = self.unidiff(commit=commit, prev=prev)
-        result = {}
+        file_ranges = {}
+        file_diff_lines_added = defaultdict(list)
         for patched_file in patch:
             if patched_file.is_removed_file:  # no post-image for removed files
                 continue
@@ -582,6 +617,11 @@ class GitRepo:
                         if range_beg is None:  # first added line in line range
                             range_beg = line.target_line_no
                         range_end = line.target_line_no
+
+                        file_diff_lines_added[patched_file.path].append(
+                            line
+                        )
+
                     else:  # deleted line, context line, or "No newline at end of file" line
                         if range_beg is not None:
                             line_ranges.append((range_beg, range_end))
@@ -591,9 +631,9 @@ class GitRepo:
                 if range_beg is not None:
                     line_ranges.append((range_beg, range_end))
 
-            result[patched_file.path] = line_ranges
+            file_ranges[patched_file.path] = line_ranges
 
-        return result
+        return file_ranges, file_diff_lines_added
 
     def _file_contents_process(self, commit, path):
         cmd = [
@@ -916,7 +956,7 @@ class GitRepo:
         if addition_optimization:
             diff_stat = self.diff_file_status(commit, prev)
 
-        changes_info = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
+        changes_info, _ = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
         for file_path, line_extents in changes_info.items():
             if not line_extents:
                 # empty changes, for example pure rename
