@@ -7,6 +7,8 @@ from sksurv.nonparametric import kaplan_meier_estimator
 def df_augment_surv(lines_df):
     """Augment line survival dataframe with 'T' (time) and 'E' (event) columns
 
+    Enhancing dataframe with data needed for survival analysis
+
     :param pd.DataFrame lines_df: data to augment, modified by function
     :return: modified input
     :rtype: pd.DataFrame
