@@ -59,7 +59,8 @@ class GitTestCase(unittest.TestCase):
         subprocess.run(['git', '-C', cls.repo_path, 'add', 'new_file'], check=True)
         # change file
         Path(cls.repo_path).joinpath('subdir', 'subfile').write_text('subfile\nsubfile\n')
-        # rename file
+        # rename file, and change it a bit
+        Path(cls.repo_path).joinpath('example_file').write_text('example\n2\n3\n4b\n5\n')
         subprocess.run(['git', '-C', cls.repo_path, 'mv',
                         'example_file', 'renamed_file'], check=True)
         # commit changes
@@ -149,7 +150,7 @@ class GitTestCase(unittest.TestCase):
             for f in patch
         }
         self.assertEqual(diffstat['new_file'][0], 0, "new file has no deletions")
-        self.assertEqual(diffstat['renamed_file'], (0, 0), "pure rename has no changes")
+        self.assertEqual(diffstat['renamed_file'], (1, 1), "rename with changes")
         # before: 'subfile', after: 'subfile\nsubfile\n'
         self.assertEqual(diffstat['subdir/subfile'], (0, 1), "changed file stats matches")
 
@@ -191,7 +192,7 @@ class GitTestCase(unittest.TestCase):
             actual, _ = self.repo.changed_lines_extents()
             expected = {
                 'new_file': [(1,10)],  # whole file added in v2
-                'renamed_file': [],  # file renamed in v2 from 'example_file', no changes
+                'renamed_file': [(4,4)],  # file renamed in v2 from 'example_file', changed line 4
                 'subdir/subfile': [(2,2)],  # file modified in v2 without name change
             }
             self.assertEqual(actual, expected, "changed lines for post-image for changed files match (HEAD)")
@@ -210,6 +211,7 @@ class GitTestCase(unittest.TestCase):
         actual = self.repo.file_contents('v1', 'example_file')
         self.assertEqual(actual, expected, "contents of 'example_file' at v1")
 
+        expected = 'example\n2\n3\n4b\n5\n'
         actual = self.repo.file_contents('v2', 'renamed_file')
         self.assertEqual(actual, expected, "contents of 'renamed_file' at v2")
 
@@ -256,7 +258,7 @@ class GitTestCase(unittest.TestCase):
     def test_get_commit_metadata(self):
         commit_info = self.repo.get_commit_metadata('v2')
 
-        self.assertEqual(commit_info['tree'], '4beabe9df57bd6d0bb43d4f94c98f1106437ff95',
+        self.assertEqual(commit_info['tree'], '417e98fd5c1f9ddfbdee64c98256998958d901ce',
                          "'tree' field did not change")
         self.assertEqual(commit_info['message'], 'Change some files\n\n* one renamed file\n* one new file\n',
                          "commit message matches")
@@ -379,8 +381,8 @@ class GitTestCase(unittest.TestCase):
             # changes in 'subdir/subfile' consist of single line that did not survive
             self.assertEqual(len(survival_info['subdir/subfile']), 1)
             self.assertIn('previous', survival_info['subdir/subfile'][0])
-            # all 5 lines survived from 'example_file', 1 line in 'subdir/subfile' did not
-            self.assertEqual(changes_survival_perc(survival_info), (5, 5+1))
+            # 4 lines out of 5 survived from 'example_file', 1 line in 'subdir/subfile' did not
+            self.assertEqual(changes_survival_perc(survival_info), (5-1, 5+1))
 
         with self.subTest("changes survival from v1 (addition_optimization=True)"):
             _, survival_info = self.repo.changes_survival(commit="v1",
@@ -397,7 +399,7 @@ class GitTestCase(unittest.TestCase):
             # everything in changes survived, because v2 is the last commit
             self.assertCountEqual(survival_info.keys(), [
                 'new_file',
-                # no 'example_file', as it is pure rename
+                'renamed_file',
                 'subdir/subfile',
             ])
             for path, lines in survival_info.items():
