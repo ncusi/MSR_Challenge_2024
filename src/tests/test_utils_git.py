@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 from pathlib import Path
+from pprint import pprint
 
 from unidiff import PatchSet
 
@@ -390,6 +391,21 @@ class GitTestCase(unittest.TestCase):
                 'example_file',
                 'subdir/subfile',
             ])
+
+        with self.subTest("changes survival from v2"):
+            _, survival_info = self.repo.changes_survival("v2")
+            # everything in changes survived, because v2 is the last commit
+            self.assertCountEqual(survival_info.keys(), [
+                'new_file',
+                # no 'example_file', as it is pure rename
+                'subdir/subfile',
+            ])
+            for path, lines in survival_info.items():
+                for line_info in lines:
+                    self.assertNotIn('previous', line_info)
+
+            # print("v2")
+            # pprint(survival_info)
 
     def test_count_commits(self):
         """Basic tests for GitRepo.count_commits() method"""
