@@ -381,10 +381,10 @@ class GitTestCase(unittest.TestCase):
             # all 5 lines survived from 'example_file', 1 line in 'subdir/subfile' did not
             self.assertEqual(changes_survival_perc(survival_info), (5, 5+1))
 
-        with self.subTest("changes survival from v1 (addition_optim=True)"):
+        with self.subTest("changes survival from v1 (addition_optimization=True)"):
             _, survival_info = self.repo.changes_survival(commit="v1",
                                                           prev=self.repo.empty_tree_sha1,
-                                                          addition_optim=True)
+                                                          addition_optimization=True)
             # two files created in v1
             self.assertCountEqual(survival_info.keys(), [
                 'example_file',

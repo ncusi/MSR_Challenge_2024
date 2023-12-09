@@ -906,12 +906,14 @@ class GitRepo:
             output
         )
 
-    def changes_survival(self, commit, prev=None, addition_optim=False):
+    def changes_survival(self, commit, prev=None,
+                         addition_optimization=False):
         lines_survival = {}
         all_commits_data = {}
         diff_stat = {}
 
-        if addition_optim:
+        # if we are doing the optimization, we need additiona information
+        if addition_optimization:
             diff_stat = self.diff_file_status(commit, prev)
 
         changes_info = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
@@ -921,7 +923,7 @@ class GitRepo:
                 continue
 
             # if file was added in commit, blame whole file
-            if addition_optim:
+            if addition_optimization:
                 if (None, file_path) in diff_stat:  # pure addition
                     line_extents = None  # blame whole file
 
@@ -930,6 +932,7 @@ class GitRepo:
             for line_info in lines_data:
                 if 'previous' in commits_data[line_info['commit']]:
                     line_info['previous'] = commits_data[line_info['commit']]['previous']
+
             lines_survival[file_path] = lines_data
             # NOTE: 'filename', 'boundary', and details of 'previous'
             # are different for different files, but common data could be extracted
