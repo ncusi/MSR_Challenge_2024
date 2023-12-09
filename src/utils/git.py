@@ -596,7 +596,7 @@ class GitRepo:
         :return: two dicts, with changed files names as keys,
             first with information about change lines extents,
             second with parsed change lines (only for added lines)
-        :rtype: (dict[str, list[tuple[int, int]]], dict[str, PatchLine])
+        :rtype: (dict[str, list[tuple[int, int]]], dict[str, list[PatchLine]])
         """
         # TODO: implement also for DiffSide.PRE
         if side != DiffSide.POST:
