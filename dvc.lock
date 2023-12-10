@@ -63,25 +63,25 @@ stages:
     deps:
     - path: data/interim/commit_sharings_df.csv
       hash: md5
-      md5: d6095d145d527872f2f3a4cb48102014
-      size: 483444
+      md5: dee35aeb0d0b7fa354b0022f9bd998a1
+      size: 484886
     - path: data/repositories_download_status.json
       hash: md5
-      md5: 8898a0ba57ae8a4a3874a500896de4de
-      size: 233264
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
     - path: scripts/data/compute_changes_survival.py
       hash: md5
-      md5: 39fec757150a635cf9a688d999c7d6f2
-      size: 23494
+      md5: 89572c05b2c95abaa8b11fc664df7953
+      size: 23649
     outs:
     - path: data/interim/commit_sharings_changes_survival_df.csv
       hash: md5
-      md5: 4113b0f45a600a2da47f2b35bb06aea3
-      size: 530736
+      md5: 194afee4cff70543824bd2a73e3a1f1b
+      size: 532182
     - path: data/interim/commit_sharings_lines_survival_df.csv
       hash: md5
-      md5: 30d2290776f2e4ef08a43704b8ed8b30
-      size: 48269210
+      md5: 86f6555da3fede31e4879d8f2ae2f011
+      size: 49086881
   repo_stats_git:
     cmd: python scripts/data/compute_repository_statistics_git.py data/external/DevGPT/
       data/repositories_download_status.json data/interim/repository_statistics_git.json
@@ -163,25 +163,25 @@ stages:
     deps:
     - path: data/interim/pr_sharings_df.csv
       hash: md5
-      md5: f25f85a3974278ee21aff2cda1b707a9
-      size: 770593
+      md5: 343abf1b666b59e70e9f9ddd10762642
+      size: 771169
     - path: data/repositories_download_status.json
       hash: md5
-      md5: 8898a0ba57ae8a4a3874a500896de4de
-      size: 233264
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
     - path: scripts/data/compute_changes_survival.py
       hash: md5
-      md5: 39fec757150a635cf9a688d999c7d6f2
-      size: 23494
+      md5: 89572c05b2c95abaa8b11fc664df7953
+      size: 23649
     outs:
     - path: data/interim/pr_sharings_changes_survival_df.csv
       hash: md5
-      md5: 978334452e87d7a534586ca75231d33e
-      size: 595061
+      md5: 387450564b3b846886a5c046661c5d82
+      size: 595511
     - path: data/interim/pr_sharings_lines_survival_df.csv
       hash: md5
-      md5: a272dfeade204bec879618eb71a22b65
-      size: 47992080
+      md5: ee93460211b2c84983f35e541f60ab41
+      size: 48636314
   pr_split_survival:
     cmd: python scripts/data/compute_changes_survival.py data/interim/pr_sharings_split_commit_df.csv
       data/repositories_download_status.json data/interim/pr_sharings_split_commit_changes_survival_df.csv
@@ -189,25 +189,25 @@ stages:
     deps:
     - path: data/interim/pr_sharings_split_commit_df.csv
       hash: md5
-      md5: e1aa661d33ac54c492c8046f242dc1e7
-      size: 1201863
+      md5: b61516427911535aa4df16aa63ae4480
+      size: 1208561
     - path: data/repositories_download_status.json
       hash: md5
-      md5: 8898a0ba57ae8a4a3874a500896de4de
-      size: 233264
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
     - path: scripts/data/compute_changes_survival.py
       hash: md5
-      md5: 39fec757150a635cf9a688d999c7d6f2
-      size: 23494
+      md5: 89572c05b2c95abaa8b11fc664df7953
+      size: 23649
     outs:
     - path: data/interim/pr_sharings_split_commit_changes_survival_df.csv
       hash: md5
-      md5: 67d69a3cca7cdba2525fc566beb60324
-      size: 1313592
+      md5: 5f6f413d380b722563537eebaa0ba4fa
+      size: 1320298
     - path: data/interim/pr_sharings_split_commit_lines_survival_df.csv
       hash: md5
-      md5: 8f8932f77c14d26bbf65ad0153df5f1d
-      size: 149749534
+      md5: f43fe51f78059723e6038113b54a3a7a
+      size: 150703703
   issue_agg:
     cmd: python scripts/data/issue_sharings_to_agg.py data/external/DevGPT/ data/repositories_download_status.json
       data/interim/
@@ -241,22 +241,22 @@ stages:
     deps:
     - path: data/interim/issue_sharings_df.csv
       hash: md5
-      md5: e4d5790aa7222789d42f194aac59bf9b
-      size: 717771
+      md5: 3efdd8aa822b83dd02978dd323313e52
+      size: 718852
     - path: data/repositories_download_status.json
       hash: md5
-      md5: 8898a0ba57ae8a4a3874a500896de4de
-      size: 233264
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
     - path: scripts/data/compute_changes_survival.py
       hash: md5
-      md5: 39fec757150a635cf9a688d999c7d6f2
-      size: 23494
+      md5: 89572c05b2c95abaa8b11fc664df7953
+      size: 23649
     outs:
     - path: data/interim/issue_sharings_changes_survival_df.csv
       hash: md5
-      md5: e8ad8de09bb685d32ee8ffdfcfcb87ef
-      size: 103948
+      md5: 71da5434e85ed2e9505486b3c939b9d1
+      size: 104116
     - path: data/interim/issue_sharings_lines_survival_df.csv
       hash: md5
-      md5: c11ec58c1726f10cf9226deabca1476a
-      size: 21003858
+      md5: 02567d03932021bf7d7e7140cf068c9a
+      size: 21371862
