@@ -227,6 +227,7 @@ def process_commit_changed_lines(repo: GitRepo,
     - 'last_lineno': line number in `last_filename` at `last_commit`
     - 'line': the contents of the line (present both in `Sha` and
       `last_commit`)
+    - 'diff_line_no': line number in diff of `Sha` unidiff of changes
     - 'next_commit': SHA-1 identifier of the next commit after `last_commit`,
       i.e. commit that has `last_commit` as a parent, and which do not
       contain the line in question any longer; might be N/A if line
@@ -301,6 +302,7 @@ def process_commit_changed_lines(repo: GitRepo,
                 'last_filename': change_line_info['original_filename'],
                 'last_lineno': change_line_info['original'],
                 'line': change_line_info['line'],
+                'diff_line_no': change_line_info['unidiff.patch.Line'].diff_line_no,
                 'next_commit':
                     change_line_info.get('previous_commit', None),
                 'next_filename':
