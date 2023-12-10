@@ -6,7 +6,8 @@ from pathlib import Path
 
 from unidiff import PatchSet
 
-from src.utils.compare import get_hunk_images, get_max_coverage, CompareFragments
+from src.utils.compare import (get_hunk_images, get_max_coverage,
+                               CompareFragments, diff_to_conversation)
 
 
 class CompareTestCase(unittest.TestCase):
@@ -166,6 +167,29 @@ class CompareTestCase(unittest.TestCase):
                 self.assertEqual(expected, actual, "expected chat lines of 'Prompt's matches against diff")
 
                 # TODO: continue...
+
+    def test_diff_to_conversation(self):
+        # https://github.com/unknowntpo/playground-2022/commit/9bd6aa4742baec81d11913712f17e0da7517bdee
+        raw_patch = Path('test_utils_compare-files/9bd6aa4742baec81d11913712f17e0da7517bdee.diff').read_text()
+        parsed_patch = PatchSet(raw_patch)
+
+        # https://chat.openai.com/share/58d110d6-4236-461c-b3c4-a8df6519c534
+        # $ jq '.Sources[11].ChatgptSharing[0].Conversations' 20231012_230826_commit_sharings.json
+        conv_json = Path('test_utils_compare-files/58d110d6-4236-461c-b3c4-a8df6519c534-conv.json').read_text()
+        conv = json.loads(conv_json)
+
+        # 1st and only file in the patch
+        # patched_file = parsed_patch[0]
+
+        res = diff_to_conversation(diff=parsed_patch, conv={'Conversations': conv})
+        self.assertEqual(list(range(9, 21+1)), res['ALL']['lines'],
+                         "expected lines in postimage match, as against 'ListOfCode'")
+
+        # res = diff_to_conversation(diff=parsed_patch, conv={'Conversations': conv},
+        #                            debug=True)
+
+        # from pprint import pprint
+        # pprint(res)
 
 
 if __name__ == '__main__':

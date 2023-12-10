@@ -1,6 +1,7 @@
 import copy
 import re
 from difflib import SequenceMatcher, get_close_matches
+from operator import itemgetter
 
 from unidiff import PatchSet, PatchedFile, Hunk
 from joblib import Parallel, delayed
@@ -259,7 +260,8 @@ def get_hunk_images(hunk):
     return preimage, postimage
 
 
-def get_max_coverage(image, conv, Compare = CompareFragments):
+def get_max_coverage(image, conv, Compare = CompareFragments,
+                     ret_chat_line_no=False, ret_score=False):
     """
 
     Returns dict with the following structure:
@@ -274,6 +276,8 @@ def get_max_coverage(image, conv, Compare = CompareFragments):
     :param dict conv: "Conversation" part of `ChatgptSharing` structure,
         see https://github.com/NAIST-SE/DevGPT/blob/main/README.md#conversations
     :param type[CompareBase] Compare: compare class to use
+    :param bool ret_chat_line_no: whether to add chat_line_no to output
+    :param bool ret_score: whether to add similarity score to output
     :return:
     :rtype: dict[str, list[int]]
     """
@@ -291,14 +295,23 @@ def get_max_coverage(image, conv, Compare = CompareFragments):
         for lno, loc in enumerate(prompt["ListOfCode"]):
             m_loc.compare(loc["Content"], pno, lno)
 
-    return {"P": m_prompt.final(), "A": m_answer.final(), "L": m_loc.final()}
+    return {
+        # among 'Prompt'
+        "P": m_prompt.final(ret_chat_line_no=ret_chat_line_no, ret_score=ret_score),
+        "p": m_prompt.pos,
+        # among 'Answer'
+        "A": m_answer.final(ret_chat_line_no=ret_chat_line_no, ret_score=ret_score),
+        "a": m_answer.pos,
+        # among 'ListOfCode'
+        "L": m_loc.final(ret_chat_line_no=ret_chat_line_no, ret_score=ret_score),
+        "l": m_loc.pos,
+    }
 
 
-def diff_to_conversation_file(file, diff, conv, debug=False, compare=CompareFragments):
+def diff_to_conversation_file(file, conv, debug=False, compare=CompareFragments):
     """
 
     :param PatchedFile file: file updated by `diff`, it is a list of Hunk's
-    :param PatchSet diff: result of running GitRepo.unidiff(), it is a list of PatchedFile's
     :param dict conv: ChatGPT link mention as `ChatgptSharing` structure,
         see https://github.com/NAIST-SE/DevGPT/blob/main/README.md#chatgptsharing
     :param bool debug: return also data about individual files
@@ -318,21 +331,23 @@ def diff_to_conversation_file(file, diff, conv, debug=False, compare=CompareFrag
         }
     }
 
-    fn = file.source_file
-
+    fn = file.path
     if debug:
-        ret[fn] = {}
+        ret["FILE"] = (file.source_file, file.target_file)
+        ret["PATH"] = fn
 
     for i, hunk in enumerate(file):
         preimage, postimage = get_hunk_images(hunk)
 
+        pre = get_max_coverage(preimage, conv["Conversations"], Compare=compare,
+                               ret_chat_line_no=debug, ret_score=debug)
+        post = get_max_coverage(postimage, conv["Conversations"], Compare=compare,
+                                ret_chat_line_no=debug, ret_score=debug)
 
-        pre = get_max_coverage(preimage, conv["Conversations"], Compare=compare)
-        post = get_max_coverage(postimage, conv["Conversations"], Compare=compare)
-
+        # Only 'Answer' and 'ListOfCode' for post
         ret_lines = []
-        ret_lines.extend(post["A"])
-        ret_lines.extend(post["L"])
+        ret_lines.extend(map(itemgetter(0), post["A"]) if debug else post["A"])
+        ret_lines.extend(map(itemgetter(0), post["L"]) if debug else post["L"])
         ret_lines = set(ret_lines)
         # TODO: check how many remove lines from 'P'
         # that are exactly the same as in 'A' + 'L'.
@@ -344,13 +359,21 @@ def diff_to_conversation_file(file, diff, conv, debug=False, compare=CompareFrag
         ret["ALL"]["all"] += len(postimage)
         ret["ALL"]["lines"] = ret["ALL"]["lines"].union(ret_lines)
 
-        ret["ALL"]["preimage"] = ret["ALL"]["preimage"].union(set(pre["P"])) # Only prompt for pre
-        ret["ALL"]["preimage_coverage"] += len(pre["P"]) # Only prompt for pre
+        # Only 'Prompt' for pre
+        pre_set = set(map(itemgetter(0), pre["P"]) if debug else pre["P"])
+        ret["ALL"]["preimage"] = ret["ALL"]["preimage"].union(pre_set)
+        ret["ALL"]["preimage_coverage"] += len(pre_set)
         ret["ALL"]["preimage_all"] += len(preimage)
 
         if debug:
-            ret[fn][i] = {"pre": pre, "post": post}
-            ret[fn][i]["lines"] = list(ret_lines)
+            if "HUNKS" not in ret:
+                ret["HUNKS"] = {}
+
+            ret["HUNKS"][i] = {
+                "pre": pre,
+                "post": post,
+                "lines": list(ret_lines),
+            }
 
     return ret
 
@@ -369,6 +392,8 @@ def diff_to_conversation(diff, conv, debug=False, compare = CompareFragments):
     ret = {}
 
     ret["ALL"] = {"coverage": 0, "all": 0, "lines": [], 'preimage':[], 'preimage_all':0, 'preimage_coverage':0}
+    if debug:
+        ret["ALL"]["debug"] = True
 
     if "Conversations" not in conv:
         return ret
@@ -376,7 +401,7 @@ def diff_to_conversation(diff, conv, debug=False, compare = CompareFragments):
     ret_list =[]
     #for file in diff:
     #    ret_list.append(diff_to_conversation_file(file, diff, conv, debug, compare))
-    ret_list = Parallel(n_jobs=-1)(delayed(diff_to_conversation_file)(file, diff, conv, debug, compare) for file in diff)
+    ret_list = Parallel(n_jobs=-1)(delayed(diff_to_conversation_file)(file, conv, debug, compare) for file in diff)
 
     for r in ret_list:
         ret["ALL"]["coverage"] += r['ALL']["coverage"]
@@ -388,5 +413,16 @@ def diff_to_conversation(diff, conv, debug=False, compare = CompareFragments):
         ret["ALL"]["lines"].extend(r['ALL']["lines"])
         ret["ALL"]["preimage"].extend(r['ALL']["preimage"])
 
+        if debug:
+            # r might be {} if there were errors
+            if 'PATH' in r:
+                filename = r['PATH']
+                if 'FILES' not in ret:
+                    ret['FILES'] = {}
+                ret['FILES'][filename] = {
+                    key: value
+                    for key, value in r.items()
+                    if key in ['FILE', 'HUNKS']
+                }
 
     return ret
