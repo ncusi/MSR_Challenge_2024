@@ -96,7 +96,7 @@ class GitTestCase(unittest.TestCase):
             'subdir/subfile'
         ]
         actual = self.repo.list_files('v1')
-        self.assertCountEqual(actual, expected, "list of files in v1")
+        self.assertCountEqual(expected, actual, "list of files in v1")
 
         expected = [
             'renamed_file',
@@ -104,7 +104,7 @@ class GitTestCase(unittest.TestCase):
             'new_file'
         ]
         actual = self.repo.list_files()
-        self.assertCountEqual(actual, expected, "list of files in HEAD")
+        self.assertCountEqual(expected, actual, "list of files in HEAD")
 
     def test_list_changed_files(self):
         """Test that GitRepo.list_changed_files returns correct list of files"""
@@ -114,7 +114,7 @@ class GitTestCase(unittest.TestCase):
             'renamed_file',
         ]
         actual = self.repo.list_changed_files('v2')
-        self.assertCountEqual(actual, expected, "list of changed files in v2 (post)")
+        self.assertCountEqual(expected, actual, "list of changed files in v2 (post)")
 
         expected = [
             # no 'new_file'
@@ -122,7 +122,7 @@ class GitTestCase(unittest.TestCase):
             'example_file',  # before rename
         ]
         actual = self.repo.list_changed_files('v2', side=DiffSide.PRE)
-        self.assertCountEqual(actual, expected, "list of changed files in v2 (post)")
+        self.assertCountEqual(expected, actual, "list of changed files in v2 (post)")
 
     def test_diff_file_status(self):
         """Test the result of GitRepo.diff_file_status"""
@@ -132,7 +132,7 @@ class GitTestCase(unittest.TestCase):
             ('subdir/subfile',)*2: 'M',  # file modified in v2 without name change
         }
         actual = self.repo.diff_file_status('v2')
-        self.assertCountEqual(actual, expected, "status of changed files in v2")
+        self.assertCountEqual(expected, actual, "status of changed files in v2")
 
     def test_unidiff(self):
         """Test extracting data from GitRepo.unidiff"""
@@ -194,7 +194,7 @@ class GitTestCase(unittest.TestCase):
                 'renamed_file': [(4,4)],  # file renamed in v2 from 'example_file', changed line 4
                 'subdir/subfile': [(2,2)],  # file modified in v2 without name change
             }
-            self.assertEqual(actual, expected, "changed lines for post-image for changed files match (HEAD)")
+            self.assertEqual(expected, actual, "changed lines for post-image for changed files match (HEAD)")
 
         with self.subTest("for v1 (first commit, root)"):
             actual, _ = self.repo.changed_lines_extents('v1')
@@ -202,17 +202,17 @@ class GitTestCase(unittest.TestCase):
                 'example_file': [(1,5)],  # whole file added in v1 with 5 lines
                 'subdir/subfile': [(1,1)],  # whole file added in v2 with 1 incomplete line
             }
-            self.assertEqual(actual, expected, "changed lines for post-image for changed files match (v1)")
+            self.assertEqual(expected, actual, "changed lines for post-image for changed files match (v1)")
 
     def test_file_contents(self):
         """Test that GitRepo.file_contents returns file contents as text"""
         expected = 'example\n2\n3\n4\n5\n'
         actual = self.repo.file_contents('v1', 'example_file')
-        self.assertEqual(actual, expected, "contents of 'example_file' at v1")
+        self.assertEqual(expected, actual, "contents of 'example_file' at v1")
 
         expected = 'example\n2\n3\n4b\n5\n'
         actual = self.repo.file_contents('v2', 'renamed_file')
-        self.assertEqual(actual, expected, "contents of 'renamed_file' at v2")
+        self.assertEqual(expected, actual, "contents of 'renamed_file' at v2")
 
     def test_open_file(self):
         """Test that GitRepo.open_file works as a context manager, returning binary file"""
@@ -220,7 +220,7 @@ class GitTestCase(unittest.TestCase):
         with self.repo.open_file('v1', 'example_file') as fpb:
             actual = fpb.read()
 
-        self.assertEqual(actual, expected, "streamed contents of 'example_file' at v1")
+        self.assertEqual(expected, actual, "streamed contents of 'example_file' at v1")
 
     @slow_test
     def test_checkout_revision(self):
@@ -252,7 +252,7 @@ class GitTestCase(unittest.TestCase):
         expected = ['v1', 'v1.5', 'v2']
         actual = self.repo.list_tags()
 
-        self.assertEqual(actual, expected, "list of tags matches")
+        self.assertEqual(expected, actual, "list of tags matches")
 
     def test_get_commit_metadata(self):
         commit_info = self.repo.get_commit_metadata('v2')
@@ -322,7 +322,7 @@ class GitTestCase(unittest.TestCase):
             'refs/tags/v1.5',
             'refs/tags/v2',
         ]
-        self.assertCountEqual(actual, expected, "'v1' is merged into HEAD, v1, v1.5, v2")
+        self.assertCountEqual(expected, actual, "'v1' is merged into HEAD, v1, v1.5, v2")
         actual = self.repo.check_merged_into('v2', 'refs/tags/v1')
         self.assertFalse(actual, "'v2' is not merged into v1")
 
@@ -410,11 +410,11 @@ class GitTestCase(unittest.TestCase):
         expected = 3  # v1, v1.5, v2
         with self.subTest("default value of start_from"):
             actual = self.repo.count_commits()
-            self.assertEqual(actual, expected, "number of commits in repository matches")
+            self.assertEqual(expected, actual, "number of commits in repository matches")
 
         with self.subTest("for start_from='HEAD'"):
             actual = self.repo.count_commits('HEAD')
-            self.assertEqual(actual, expected, "number of commits in repository matches")
+            self.assertEqual(expected, actual, "number of commits in repository matches")
 
     def test_list_authors(self):
         """Test GitRepo.list_authors_shortlog() and related methods"""
@@ -434,7 +434,7 @@ class GitTestCase(unittest.TestCase):
             AuthorStat(author='Joe Random', count=1)
         ]
         actual = parse_shortlog_count(authors_shortlog)
-        self.assertCountEqual(actual, expected, "parsed authors counts matches")
+        self.assertCountEqual(expected, actual, "parsed authors counts matches")
 
     def test_select_core_authors(self):
         """Test select_core_authors() function"""
@@ -474,7 +474,7 @@ class GitTestCase(unittest.TestCase):
         """Test GitRepo.get_config() method"""
         expected = 'A U Thor'  # set up in setUpClass() class method
         actual = self.repo.get_config('user.name')
-        self.assertEqual(actual, expected, "got expected value for 'user.name'")
+        self.assertEqual(expected, actual, "got expected value for 'user.name'")
 
         actual = self.repo.get_config('not-exists')
         self.assertIsNone(actual, "returns `None` for invalid variable name")
