@@ -152,6 +152,7 @@ class CompareTopFragments(CompareBase):
 class CompareFragments(CompareBase):
     def __init__(self, image, lines=False):
         super().__init__(image, lines)
+        self.chat = ""
 
     def compare(self, b, pno, lno=None):
         a = self.simage
@@ -168,15 +169,15 @@ class CompareFragments(CompareBase):
                     self.pos["l"] = lno
 
     # Max version
-    def final(self):
+    def final(self, cutoff=0.5):
         if not self.seq_match:
             return []
 
-        chatl = self.chat.splitlines()
+        chat_lines = self.chat.splitlines()
         ret = []
 
         for line in self.image:
-            m = get_close_matches(str(line), chatl, 1, 0.5)
+            m = get_close_matches(str(line), chat_lines, n=1, cutoff=cutoff)
             if m:
                 ret.append(line.diff_line_no)
 
