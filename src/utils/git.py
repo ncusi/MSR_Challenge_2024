@@ -956,7 +956,7 @@ class GitRepo:
         if addition_optimization:
             diff_stat = self.diff_file_status(commit, prev)
 
-        changes_info, _ = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
+        changes_info, file_diff_lines = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
         for file_path, line_extents in changes_info.items():
             if not line_extents:
                 # empty changes, for example pure rename
@@ -969,9 +969,22 @@ class GitRepo:
 
             commits_data, lines_data = self.reverse_blame(commit, file_path,
                                                           line_extents=line_extents)
+
+            # helper structure to find corresponding unidiff.patch.Line aka PatchLine
+            lines_data_diff_lines = {}
+            if file_path in file_diff_lines:
+                lines_data_diff_lines = {
+                    diff_line.target_line_no: diff_line
+                    for diff_line in file_diff_lines[file_path]
+                }
+
             for line_info in lines_data:
                 if 'previous' in commits_data[line_info['commit']]:
                     line_info['previous'] = commits_data[line_info['commit']]['previous']
+
+                line_no = int(line_info['final'])
+                if line_no in lines_data_diff_lines:
+                    line_info['unidiff.patch.Line'] = lines_data_diff_lines[line_no]
 
             lines_survival[file_path] = lines_data
             # NOTE: 'filename', 'boundary', and details of 'previous'
