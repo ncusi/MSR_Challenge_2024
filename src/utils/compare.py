@@ -11,7 +11,22 @@ def to_str(self):
     return content
 
 
-Hunk.to_str = to_str
+def hunk_to_str(self):
+    """Extract string to be used for comparison with Hunk from unidiff.PatchSet
+
+    This `self` hunk can synthetic Hunk created as container for unidiff.patch.Line's
+    by the get_hunk_images() function.
+
+    :param Hunk self: modified block of a file, may be synthetic
+    :return: all lines of changes in hunk, with their prefix removed,
+        concatenated into a single string
+    :rtype: str
+    """
+    return "".join(line.value for line in self)
+
+
+# monkey-patching Hunk
+Hunk.to_str = hunk_to_str
 
 
 def get_close_matches2(word, pos, n, cutoff = 0.5):
