@@ -177,7 +177,11 @@ class CompareFragments(CompareBase):
         ret = []
 
         for line in self.image:
-            m = get_close_matches(str(line), chat_lines, n=1, cutoff=cutoff)
+            line_s = getattr(line, 'value', str(line)).rstrip('\n')
+            # skip empty lines; str(line) for adding empty line is '+\n', so it does not match ''
+            if not line_s:
+                continue
+            m = get_close_matches(line_s, chat_lines, n=1, cutoff=cutoff)
             if m:
                 ret.append(line.diff_line_no)
 
