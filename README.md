@@ -1,4 +1,5 @@
-# Code for MSR'24 Mining Challenge
+# How I Learned to Stop Worrying and Love the ChatGPT
+Replication package for MSR'24 Mining Challenge
 
 https://2024.msrconf.org/track/msr-2024-mining-challenge
 
