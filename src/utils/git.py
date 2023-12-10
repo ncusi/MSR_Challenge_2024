@@ -141,11 +141,18 @@ def _parse_blame_porcelain(blame_text):
                 'final': match.group('final')
             }
             if curr_commit in commits_data:
+                # TODO: unquote c-quoted filename, if needed (like in unidiff/patch.py)
+                # quoted = filepath.startswith('"') and filepath.endswith('"')
+                # filepath = '"{}"'.format(filepath) if quoted else filepath
                 curr_line['original_filename'] = commits_data[curr_commit]['filename']
+
+                # TODO: move extracting 'previous_filename' here, unquote if needed
+
         elif line.startswith('\t'):  # TAB
             # the contents of the actual line
             curr_line['line'] = line[1:]  # remove leading TAB
             line_data.append(curr_line)
+
         else:
             # other header
             if curr_commit not in commits_data:
@@ -984,6 +991,7 @@ class GitRepo:
 
                 line_no = int(line_info['final'])
                 if line_no in lines_data_diff_lines:
+                    # TODO: add a test that PatchLine matches line ('final', 'line')
                     line_info['unidiff.patch.Line'] = lines_data_diff_lines[line_no]
 
             lines_survival[file_path] = lines_data
