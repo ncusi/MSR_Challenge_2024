@@ -169,7 +169,7 @@ class CompareFragments(CompareBase):
                     self.pos["l"] = lno
 
     # Max version
-    def final(self, cutoff=0.5):
+    def final(self, cutoff=0.5, ret_chat_line_no=False):
         if not self.seq_match:
             return []
 
@@ -183,7 +183,14 @@ class CompareFragments(CompareBase):
                 continue
             m = get_close_matches(line_s, chat_lines, n=1, cutoff=cutoff)
             if m:
-                ret.append(line.diff_line_no)
+                res = line.diff_line_no
+                if ret_chat_line_no:
+                    chat_line_no = [line_no
+                                    for line_no, line in enumerate(chat_lines)
+                                    if line == m[0]][0]
+                    res = (res, chat_line_no)
+
+                ret.append(res)
 
         return ret
 
