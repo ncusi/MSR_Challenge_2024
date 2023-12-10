@@ -93,8 +93,8 @@ stages:
       nfiles: 65
     - path: data/repositories_download_status.json
       hash: md5
-      md5: 8898a0ba57ae8a4a3874a500896de4de
-      size: 233264
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
     - path: scripts/data/compute_repository_statistics_git.py
       hash: md5
       md5: 3a1ab9002d42ab9f1809764e8c4c1be1
@@ -102,7 +102,7 @@ stages:
     outs:
     - path: data/interim/repository_statistics_git.json
       hash: md5
-      md5: 6bc428239623d6e9573558ef604c8540
+      md5: a2d2d11ae1f4b6b10fcf3adec80cf08a
       size: 303476
   repo_stats_github:
     cmd: python scripts/data/compute_repository_statistics_github.py data/external/DevGPT/
@@ -115,8 +115,8 @@ stages:
       nfiles: 65
     - path: data/repositories_download_status.json
       hash: md5
-      md5: 8898a0ba57ae8a4a3874a500896de4de
-      size: 233264
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
     - path: scripts/data/compute_repository_statistics_github.py
       hash: md5
       md5: a68674ba5fa9a454f2d14c048f11bb49
@@ -124,8 +124,8 @@ stages:
     outs:
     - path: data/interim/repository_statistics_github.json
       hash: md5
-      md5: c45c63b7babd2d193dee62d02cbaa98a
-      size: 615306
+      md5: 822db4d12c06eea2e76578f7a4f3fb91
+      size: 614770
   pr_agg:
     cmd: python scripts/data/pr_sharings_to_agg.py data/external/DevGPT/ data/repositories_download_status.json
       data/interim/
