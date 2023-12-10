@@ -1,11 +1,12 @@
 import json
 import textwrap
 import unittest
+from operator import itemgetter
 from pathlib import Path
 
 from unidiff import PatchSet
 
-from src.utils.compare import get_hunk_images, get_max_coverage
+from src.utils.compare import get_hunk_images, get_max_coverage, CompareFragments
 
 
 class CompareTestCase(unittest.TestCase):
@@ -84,6 +85,10 @@ class CompareTestCase(unittest.TestCase):
                 preimage, postimage = get_hunk_images(hunk)
                 res = get_max_coverage(postimage, conv)
 
+                # print("----- postimage.to_str():")
+                # print(postimage.to_str())
+                # print("--------------------")
+
                 # from pprint import pprint
                 # pprint(res)
 
@@ -106,6 +111,61 @@ class CompareTestCase(unittest.TestCase):
                                  # all lines are almost exact match, 1 to 1
                                  # (because we are comparing str(Line), which includes '+' prefix)
                                  "expected lines in postimage match against 'ListOfCode'")
+
+    def test_compare(self):
+        # https://github.com/unknowntpo/playground-2022/commit/9bd6aa4742baec81d11913712f17e0da7517bdee
+        raw_patch = Path('test_utils_compare-files/9bd6aa4742baec81d11913712f17e0da7517bdee.diff').read_text()
+        parsed_patch = PatchSet(raw_patch)
+
+        # https://chat.openai.com/share/58d110d6-4236-461c-b3c4-a8df6519c534
+        # $ jq '.Sources[11].ChatgptSharing[0].Conversations' 20231012_230826_commit_sharings.json
+        conv_json = Path('test_utils_compare-files/58d110d6-4236-461c-b3c4-a8df6519c534-conv.json').read_text()
+        conv = json.loads(conv_json)
+
+        # from pprint import pprint
+
+        # 1st and only hunk in 1st and only file in the patch
+        _, postimage = get_hunk_images(parsed_patch[0][0])
+        # print(f"{postimage=} ({len(postimage)=})")
+        for compare_type in [CompareFragments]:
+            with self.subTest("subclass of CompareBase", compare=compare_type):
+                m_answer = compare_type(postimage)
+                m_prompt = compare_type(postimage)
+                m_loc = compare_type(postimage, lines=True)
+
+                # print(f"{len(conv)=}")
+                # print(f"before: {m_prompt=}, {m_answer=}, {m_loc=}")
+                for pno, prompt in enumerate(conv):
+                    m_prompt.compare(prompt["Prompt"], pno)
+                    m_answer.compare(prompt["Answer"], pno)
+                    # print(f".Conversation[{pno}]: {m_prompt=}, {m_answer=}")
+                    # print(f" {prompt['Prompt'][0:12]=}... vs {m_prompt.chat[0:12]=}...")
+                    # print(f" {prompt['Answer'][7:19]=}... vs {m_answer.chat[7:19]=}...")
+
+                    # print(f"{len(prompt['ListOfCode'])=}")
+                    for lno, loc in enumerate(prompt["ListOfCode"]):
+                        m_loc.compare(loc["Content"], pno, lno)
+                        # print(f" .Conversation[{pno}].ListOfCode[{lno}]: {m_loc=}")
+                        # print(f"  {loc['Content'][0:9]}... vs {m_loc.chat[0:9]}...")
+
+                # print(f"{m_prompt.final(ret_chat_line_no=True, ret_score=True)=}")
+                # print(f".Conversation[{m_prompt.pos['p']}] with s.ratio()={m_prompt.pos['r']}")
+                # print(f"{m_answer.final(ret_chat_line_no=True, ret_score=True)=}")
+                # print(f".Conversation[{m_answer.pos['p']}] with s.ratio()={m_answer.pos['r']}")
+                #
+                # print(f"{m_loc.final(ret_chat_line_no=True, ret_score=True)=}")
+                # print(f".Conversation[{m_loc.pos['p']}].ListOfCode[{m_loc.pos['l']}] with s.ratio()={m_loc.pos['r']}")
+
+                m_prompt_final = m_prompt.final(ret_chat_line_no=True, ret_score=True)
+                actual = list(map(itemgetter(0), m_prompt_final))
+                expected = list(range(10, 20+1))
+
+                self.assertEqual(expected, actual, "expected diff lines match against 'Prompt's")
+                actual = list(map(itemgetter(1), m_prompt_final))
+                expected = [4] * 11
+                self.assertEqual(expected, actual, "expected chat lines of 'Prompt's matches against diff")
+
+                # TODO: continue...
 
 
 if __name__ == '__main__':
