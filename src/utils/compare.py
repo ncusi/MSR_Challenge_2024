@@ -2,7 +2,7 @@ import copy
 import re
 from difflib import SequenceMatcher, get_close_matches
 
-from unidiff import Hunk
+from unidiff import PatchSet, PatchedFile, Hunk
 from joblib import Parallel, delayed
 
 
@@ -151,10 +151,25 @@ class CompareTopFragments(CompareBase):
 
 class CompareFragments(CompareBase):
     def __init__(self, image, lines=False):
+        """Construct a CompareFragments
+
+        :param Hunk image: pre-image or post-image hunk of commit diff;
+            unidiff.Hunk is monkey-patched to have `to_str` attribute (method).
+        :param bool lines: whether to remember `lno` in compare()
+        """
+        # noinspection PyTypeChecker
         super().__init__(image, lines)
         self.chat = ""
 
     def compare(self, b, pno, lno=None):
+        """Compare pre-image or post-image hunk against ChatGPT text
+
+        :param str b: text of element of ChatGPT conversation
+            (prompt, or answer, or code block)
+        :param int pno: index into 'Conversations' list of 'ChatgptSharing'
+        :param int or None lno: index into 'ListOfCode' list of conversation
+        :rtype: None
+        """
         a = self.simage
         s = SequenceMatcher(None, a, b)
 
@@ -171,6 +186,19 @@ class CompareFragments(CompareBase):
     # Max version
     def final(self, cutoff=0.5,
               ret_chat_line_no=False, ret_score=False):
+        """Final result of sequence of compare()'s
+
+        :param float cutoff: a float in the range [0, 1], default 0.5.
+            Lines from ChatGPT that don’t score at least that similar to patch line
+            are ignored.
+        :param bool ret_chat_line_no: whether to add chat_line_no to output
+        :param bool ret_score: whether to add similarity score to output
+        :return: list of diff line numbers of those lines in the `self.image` Hunk
+            that have at least 1 matching line with at least `cutoff` similarity
+            in one of compared chat fragments (prompt, or answer, or code block),
+            or list of tuples that include diff line number as first element
+        :rtype: list[int] or list[tuple[int, int]] or list[tuple[int, float]] or list[tuple[int, int, float]]
+        """
         if not self.seq_match:
             return []
 
@@ -207,6 +235,17 @@ class CompareFragments(CompareBase):
 
 
 def get_hunk_images(hunk):
+    """Split chunk into pre-image and post-image Hunk
+
+    Second Hunk in the returned tuple includes only added files;
+    all the other lines are returned in first Hunk in the tuple.
+    Note that those returned synthesized chunks may lack correct
+    header information - they are used only as containers for patch.Line.
+
+    :param Hunk hunk: original part of diff, includes added, removed, and context lines
+    :return: "preimage" and "postimage" hunks
+    :rtype: (Hunk, Hunk)
+    """
     postimage = Hunk()
     preimage = Hunk()
     for line in hunk:
@@ -221,6 +260,23 @@ def get_hunk_images(hunk):
 
 
 def get_max_coverage(image, conv, Compare = CompareFragments):
+    """
+
+    Returns dict with the following structure:
+        {
+            "P": <comparison of `hunk` with "Prompt">,
+            "A": <comparison of `hunk` with "Answer">,
+            "L": <comparison of `hunk` with "ListOfCode">,
+        }
+
+    :param Hunk image: modified block of file, changed by diff;
+        might be synthesized hunk returned by :func:`get_hunk_images`
+    :param dict conv: "Conversation" part of `ChatgptSharing` structure,
+        see https://github.com/NAIST-SE/DevGPT/blob/main/README.md#conversations
+    :param type[CompareBase] Compare: compare class to use
+    :return:
+    :rtype: dict[str, list[int]]
+    """
     # iterate over conversation
     m_answer = Compare(image)
     m_prompt = Compare(image)
@@ -238,7 +294,18 @@ def get_max_coverage(image, conv, Compare = CompareFragments):
     return {"P": m_prompt.final(), "A": m_answer.final(), "L": m_loc.final()}
 
 
-def diff_to_conversation_file(file, diff, conv, debug=False, compare = CompareFragments):
+def diff_to_conversation_file(file, diff, conv, debug=False, compare=CompareFragments):
+    """
+
+    :param PatchedFile file: file updated by `diff`, it is a list of Hunk's
+    :param PatchSet diff: result of running GitRepo.unidiff(), it is a list of PatchedFile's
+    :param dict conv: ChatGPT link mention as `ChatgptSharing` structure,
+        see https://github.com/NAIST-SE/DevGPT/blob/main/README.md#chatgptsharing
+    :param bool debug: return also data about individual files
+    :param type[CompareBase] compare: compare class to use
+    :return:
+    rtype dict[str, dict[str, int | set] | dict]
+    """
 
     ret = {
         "ALL": {
@@ -289,6 +356,16 @@ def diff_to_conversation_file(file, diff, conv, debug=False, compare = CompareFr
 
 
 def diff_to_conversation(diff, conv, debug=False, compare = CompareFragments):
+    """
+
+    :param PatchSet diff: result of running GitRepo.unidiff(), it is a list of PatchedFile's
+    :param dict conv: ChatGPT link mention as `ChatgptSharing` structure,
+        see https://github.com/NAIST-SE/DevGPT/blob/main/README.md#chatgptsharing
+    :param bool debug: passed down to :func:`diff_to_conversation_file`
+    :param type[CompareBase] compare: compare class to use
+    :return:
+    :rtype: dict[str, dict[str, int | list]]
+    """
     ret = {}
 
     ret["ALL"] = {"coverage": 0, "all": 0, "lines": [], 'preimage':[], 'preimage_all':0, 'preimage_coverage':0}
