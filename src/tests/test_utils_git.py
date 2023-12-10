@@ -6,7 +6,6 @@ import subprocess
 import sys
 
 from pathlib import Path
-from pprint import pprint
 
 from unidiff import PatchSet
 
@@ -405,9 +404,6 @@ class GitTestCase(unittest.TestCase):
             for path, lines in survival_info.items():
                 for line_info in lines:
                     self.assertNotIn('previous', line_info)
-
-            # print("v2")
-            # pprint(survival_info)
 
     def test_count_commits(self):
         """Basic tests for GitRepo.count_commits() method"""
