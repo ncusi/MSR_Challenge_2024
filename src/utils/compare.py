@@ -169,7 +169,8 @@ class CompareFragments(CompareBase):
                     self.pos["l"] = lno
 
     # Max version
-    def final(self, cutoff=0.5, ret_chat_line_no=False):
+    def final(self, cutoff=0.5,
+              ret_chat_line_no=False, ret_score=False):
         if not self.seq_match:
             return []
 
@@ -189,6 +190,16 @@ class CompareFragments(CompareBase):
                                     for line_no, line in enumerate(chat_lines)
                                     if line == m[0]][0]
                     res = (res, chat_line_no)
+                if ret_score:
+                    # following source of get_close_matches() in difflib library
+                    # https://github.com/python/cpython/blob/main/Lib/difflib.py
+                    # s.set_seq2(word), s.set_seq1(possibilities[i])
+                    s = SequenceMatcher(a=m[0], b=line_s)  # a ≡ s.set_seq1, b ≡ s.set_seq2
+                    r = s.ratio()
+                    if isinstance(res, tuple):
+                        res = (*res, r)
+                    else:
+                        res = (res, r)
 
                 ret.append(res)
 
