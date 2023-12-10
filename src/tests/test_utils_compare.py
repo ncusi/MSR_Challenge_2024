@@ -1,9 +1,11 @@
+import json
 import textwrap
 import unittest
+from pathlib import Path
 
 from unidiff import PatchSet
 
-from src.utils.compare import get_hunk_images
+from src.utils.compare import get_hunk_images, get_max_coverage
 
 
 class CompareTestCase(unittest.TestCase):
@@ -60,6 +62,50 @@ class CompareTestCase(unittest.TestCase):
                 preimage, postimage = get_hunk_images(hunk)
                 self.assertEqual(len(hunk), len(preimage) + len(postimage),
                                  f"hunk = preimage + postimage for {hunk}")
+
+    def test_get_max_coverage(self):
+        # https://github.com/unknowntpo/playground-2022/commit/9bd6aa4742baec81d11913712f17e0da7517bdee
+        raw_patch = Path('test_utils_compare-files/9bd6aa4742baec81d11913712f17e0da7517bdee.diff').read_text()
+        parsed_patch = PatchSet(raw_patch)
+
+        # https://chat.openai.com/share/58d110d6-4236-461c-b3c4-a8df6519c534
+        # $ jq '.Sources[11].ChatgptSharing[0].Conversations' 20231012_230826_commit_sharings.json
+        conv_json = Path('test_utils_compare-files/58d110d6-4236-461c-b3c4-a8df6519c534-conv.json').read_text()
+        conv = json.loads(conv_json)
+
+        # print(f"{len(conv)=}; {conv[0].keys()=}")
+        # print(f"{parsed_patch=}")
+        self.assertEqual(1, len(parsed_patch), "1 file in patch")
+        for patched_file in parsed_patch:
+            # print(f"{patched_file=}")
+            self.assertEqual(1, len(patched_file), f"1 hunk in changed file '{patched_file.path}'")
+            for hunk in patched_file:
+                # print(f"{hunk=}")
+                preimage, postimage = get_hunk_images(hunk)
+                res = get_max_coverage(postimage, conv)
+
+                # from pprint import pprint
+                # pprint(res)
+
+                # print(f"{preimage=}, ({len(preimage)=})")
+                # print(f"{postimage=}, ({len(postimage)=}):")
+                # for patch_line in postimage:
+                #     line_no = patch_line.diff_line_no
+                #     print(f"{line_no:2}: "
+                #           f"{'P' if line_no in res['P'] else ' '}"
+                #           f"{'A' if line_no in res['A'] else ' '}"
+                #           f"{'L' if line_no in res['L'] else ' '}"
+                #           f" {patch_line}", end='')
+
+                self.assertEqual(list(range(10, 20+1)), res['P'],
+                                 # lines matching 'name: string, age: int , earn: int' pattern in "Prompt"
+                                 "accidental match against postimage in 'Prompt'")
+                self.assertEqual([], res['A'],
+                                 "no match against postimage in 'Answer'")
+                self.assertEqual(list(range(9, 21+1)), res['L'],
+                                 # all lines are almost exact match, 1 to 1
+                                 # (because we are comparing str(Line), which includes '+' prefix)
+                                 "expected lines in postimage match against 'ListOfCode'")
 
 
 if __name__ == '__main__':
