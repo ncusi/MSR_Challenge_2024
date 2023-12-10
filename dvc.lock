@@ -28,8 +28,8 @@ stages:
     outs:
     - path: data/repositories_download_status.json
       hash: md5
-      md5: 8898a0ba57ae8a4a3874a500896de4de
-      size: 233264
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
   commit_agg:
     cmd: python scripts/data/commit_sharings_to_agg.py data/external/DevGPT/ data/repositories_download_status.json
       data/interim/
