@@ -13,6 +13,7 @@ import json
 import subprocess
 import sys
 import time
+from datetime import timedelta
 from pathlib import Path
 
 import joblib
@@ -170,13 +171,14 @@ def process_sharings(sharings_data, sharings_df, all_repos,
         )
         progress_bar.set_postfix_str('done')
 
-    print(f"There were {sum(1 for x in ret_similarities if not x[1])} problems"
+    print(f"There were {sum(1 for x in ret_similarities if not x[1])} problems "
           f"during the processing of {len(sharings_data)}/{total_conv_len} elements", file=sys.stderr)
     max_time = max(ret_similarities, key=lambda x: x[2] if x[1] else 0.0)
     sum_time = sum(x[2] for x in ret_similarities if x[1])
-    print(f"Slowest at {max_time[2]} sec was with {max_time[1]['ALL']['all']} 'postimage_all' for\n"
+    print(f"Slowest at {max_time[2]} sec = {timedelta(seconds=max_time[2])}, "
+          f"with {max_time[1]['ALL']['all']} 'postimage_all' was\n"
           f"  URL={max_time[0]}", file=sys.stderr)
-    print(f"Sum of all times is {sum_time} sec (sequential time)", file=sys.stderr)
+    print(f"Sum of all times is {sum_time} sec = {timedelta(seconds=sum_time)}", file=sys.stderr)
 
     if checkpoint_file_path is not None:
         print(f"Saving ret_similarities data ({len(ret_similarities)} elements)"
@@ -330,7 +332,7 @@ def main():
 
     # .......................................................................
     # PROCESSING
-    checkpoint_file_path = output_file_path.with_suffix('.json')
+    checkpoint_file_path = output_file_path.with_suffix('.checkpoint_data.json')
 
     output_df = process_sharings(sharings_data, sharings_df, all_repos,
                                  checkpoint_file_path)
