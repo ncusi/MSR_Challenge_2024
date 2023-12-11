@@ -1,0 +1,51 @@
+[
+  {
+    "Prompt": "Give me an list of User in python, \n\nUser is a dictionary with these field: \n\nname: string, age: int , earn: int",
+    "Answer": "ChatGPTCertainly! You can create a list of user dictionaries in Python like this:[CODE_BLOCK_0]In this list, each element is a dictionary representing a user with fields for name, age, and earnings. You can add more users to the list or modify the existing ones as needed.",
+    "ListOfCode": [
+      {
+        "ReplaceString": "[CODE_BLOCK_0]",
+        "Type": "python",
+        "Content": "users = [\n    {\"name\": \"Alice\", \"age\": 28, \"earn\": 50000},\n    {\"name\": \"Bob\", \"age\": 35, \"earn\": 60000},\n    {\"name\": \"Charlie\", \"age\": 22, \"earn\": 45000},\n    {\"name\": \"David\", \"age\": 31, \"earn\": 70000},\n    {\"name\": \"Eve\", \"age\": 27, \"earn\": 55000}\n]\n"
+      }
+    ]
+  },
+  {
+    "Prompt": "give me 10 users",
+    "Answer": "ChatGPTCertainly! Here are 10 user dictionaries in a Python list:[CODE_BLOCK_0]You now have a list of 10 user dictionaries with names, ages, and earnings. Feel free to modify the values or add more users as needed.",
+    "ListOfCode": [
+      {
+        "ReplaceString": "[CODE_BLOCK_0]",
+        "Type": "python",
+        "Content": "users = [\n    {\"name\": \"Alice\", \"age\": 28, \"earn\": 50000},\n    {\"name\": \"Bob\", \"age\": 35, \"earn\": 60000},\n    {\"name\": \"Charlie\", \"age\": 22, \"earn\": 45000},\n    {\"name\": \"David\", \"age\": 31, \"earn\": 70000},\n    {\"name\": \"Eve\", \"age\": 27, \"earn\": 55000},\n    {\"name\": \"Frank\", \"age\": 40, \"earn\": 80000},\n    {\"name\": \"Grace\", \"age\": 33, \"earn\": 72000},\n    {\"name\": \"Hannah\", \"age\": 29, \"earn\": 61000},\n    {\"name\": \"Ian\", \"age\": 24, \"earn\": 49000},\n    {\"name\": \"Jack\", \"age\": 37, \"earn\": 75000}\n]\n"
+      }
+    ]
+  },
+  {
+    "Prompt": "how to sort users by age ASC and earn DESC",
+    "Answer": "ChatGPTYou can sort the users list first by age in ascending order and then by earnings in descending order using the sorted() function with a custom sorting key. Here's how you can do it:[CODE_BLOCK_0]In the key parameter of the sorted() function, we provide a lambda function that returns a tuple containing the age in ascending order (default) and earnings in descending order (with a negation - sign to reverse the order). This will give you a sorted list of users based on age in ascending order and earnings in descending order.If you want to sort the original users list in-place, you can use the sort() method:[CODE_BLOCK_1]After this, the users list will be sorted in the specified order.",
+    "ListOfCode": [
+      {
+        "ReplaceString": "[CODE_BLOCK_0]",
+        "Type": "python",
+        "Content": "sorted_users = sorted(users, key=lambda user: (user[\"age\"], -user[\"earn\"]))\n"
+      },
+      {
+        "ReplaceString": "[CODE_BLOCK_1]",
+        "Type": "python",
+        "Content": "users.sort(key=lambda user: (user[\"age\"], -user[\"earn\"]))\n"
+      }
+    ]
+  },
+  {
+    "Prompt": "how about filter users whose age > 30",
+    "Answer": "ChatGPTTo filter users whose age is greater than 30, you can use a list comprehension. Here's how you can do it:[CODE_BLOCK_0]This list comprehension iterates through the users list and includes only those users whose age is greater than 30 in the filtered_users list.Now, filtered_users will contain a list of user dictionaries where the age is greater than 30.",
+    "ListOfCode": [
+      {
+        "ReplaceString": "[CODE_BLOCK_0]",
+        "Type": "python",
+        "Content": "filtered_users = [user for user in users if user[\"age\"] > 30]\n"
+      }
+    ]
+  }
+]

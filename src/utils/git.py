@@ -20,6 +20,7 @@ error (like incorrect repository path, or incorrect commit)!!!
 """
 import re
 import subprocess
+from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum
 from operator import attrgetter
@@ -27,6 +28,7 @@ from os import PathLike
 from pathlib import Path
 from typing import overload, Literal, NamedTuple, Tuple
 
+from unidiff.patch import Line as PatchLine
 from unidiff import PatchSet
 
 
@@ -139,11 +141,18 @@ def _parse_blame_porcelain(blame_text):
                 'final': match.group('final')
             }
             if curr_commit in commits_data:
+                # TODO: unquote c-quoted filename, if needed (like in unidiff/patch.py)
+                # quoted = filepath.startswith('"') and filepath.endswith('"')
+                # filepath = '"{}"'.format(filepath) if quoted else filepath
                 curr_line['original_filename'] = commits_data[curr_commit]['filename']
+
+                # TODO: move extracting 'previous_filename' here, unquote if needed
+
         elif line.startswith('\t'):  # TAB
             # the contents of the actual line
             curr_line['line'] = line[1:]  # remove leading TAB
             line_data.append(curr_line)
+
         else:
             # other header
             if curr_commit not in commits_data:
@@ -564,12 +573,45 @@ class GitRepo:
             return diff_output
 
     def changed_lines_extents(self, commit='HEAD', prev=None, side=DiffSide.POST):
+        """List target line numbers of changed files as extents, for each changed file
+
+        For each changed file that appears in `side` side of the diff between
+        given commits, it returns list of `side` line numbers (e.g. target line
+        numbers for post=DiffSide.POST).
+
+        Line numbers are returned compressed as extents, that is list of
+        tuples of start and end range.  For example, if target line numbers
+        would be [1, 2, 3, 7, 10, 11], then their extent list would be
+        [(1, 3), (7, 7), (10, 11)].
+
+        To make it easier to mesh with other parts of computation, and to
+        avoid reparsing diffs, also return parsed patch lines (diff lines).
+
+        Uses :func:`GitRepo.unidiff` to parse git diff between `prev` and `commit`.
+
+        Used by :func:`GitRepo.changes_survival`.
+
+        :param str commit: later (second) of two commits to compare,
+            defaults to 'HEAD', that is the current commit
+        :param str or None prev: earlier (first) of two commits to compare,
+            defaults to None, which means comparing to parent of `commit`
+        :param DiffSide side: Whether to use names of files in post-image (after changes)
+            with side=DiffSide.POST, or pre-image names (before changes)
+            with side=DiffSide.PRE.  Renames are detected by Git.
+            Defaults to DiffSide.POST, which is currently the only value
+            supported.
+        :return: two dicts, with changed files names as keys,
+            first with information about change lines extents,
+            second with parsed change lines (only for added lines)
+        :rtype: (dict[str, list[tuple[int, int]]], dict[str, list[PatchLine]])
+        """
         # TODO: implement also for DiffSide.PRE
         if side != DiffSide.POST:
-            raise NotImplementedError(f"GitRepo.changed_lines: unsupported side={side} parameter")
+            raise NotImplementedError(f"GitRepo.changed_lines_extents: unsupported side={side} parameter")
 
         patch = self.unidiff(commit=commit, prev=prev)
-        result = {}
+        file_ranges = {}
+        file_diff_lines_added = defaultdict(list)
         for patched_file in patch:
             if patched_file.is_removed_file:  # no post-image for removed files
                 continue
@@ -582,6 +624,11 @@ class GitRepo:
                         if range_beg is None:  # first added line in line range
                             range_beg = line.target_line_no
                         range_end = line.target_line_no
+
+                        file_diff_lines_added[patched_file.path].append(
+                            line
+                        )
+
                     else:  # deleted line, context line, or "No newline at end of file" line
                         if range_beg is not None:
                             line_ranges.append((range_beg, range_end))
@@ -591,9 +638,9 @@ class GitRepo:
                 if range_beg is not None:
                     line_ranges.append((range_beg, range_end))
 
-            result[patched_file.path] = line_ranges
+            file_ranges[patched_file.path] = line_ranges
 
-        return result
+        return file_ranges, file_diff_lines_added
 
     def _file_contents_process(self, commit, path):
         cmd = [
@@ -906,30 +953,47 @@ class GitRepo:
             output
         )
 
-    def changes_survival(self, commit, prev=None, addition_optim=False):
+    def changes_survival(self, commit, prev=None,
+                         addition_optimization=False):
         lines_survival = {}
         all_commits_data = {}
         diff_stat = {}
 
-        if addition_optim:
+        # if we are doing the optimization, we need additiona information
+        if addition_optimization:
             diff_stat = self.diff_file_status(commit, prev)
 
-        changes_info = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
+        changes_info, file_diff_lines = self.changed_lines_extents(commit, prev, side=DiffSide.POST)
         for file_path, line_extents in changes_info.items():
             if not line_extents:
                 # empty changes, for example pure rename
                 continue
 
             # if file was added in commit, blame whole file
-            if addition_optim:
+            if addition_optimization:
                 if (None, file_path) in diff_stat:  # pure addition
                     line_extents = None  # blame whole file
 
             commits_data, lines_data = self.reverse_blame(commit, file_path,
                                                           line_extents=line_extents)
+
+            # helper structure to find corresponding unidiff.patch.Line aka PatchLine
+            lines_data_diff_lines = {}
+            if file_path in file_diff_lines:
+                lines_data_diff_lines = {
+                    diff_line.target_line_no: diff_line
+                    for diff_line in file_diff_lines[file_path]
+                }
+
             for line_info in lines_data:
                 if 'previous' in commits_data[line_info['commit']]:
                     line_info['previous'] = commits_data[line_info['commit']]['previous']
+
+                line_no = int(line_info['final'])
+                if line_no in lines_data_diff_lines:
+                    # TODO: add a test that PatchLine matches line ('final', 'line')
+                    line_info['unidiff.patch.Line'] = lines_data_diff_lines[line_no]
+
             lines_survival[file_path] = lines_data
             # NOTE: 'filename', 'boundary', and details of 'previous'
             # are different for different files, but common data could be extracted
