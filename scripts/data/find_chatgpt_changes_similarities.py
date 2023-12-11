@@ -13,7 +13,6 @@ import json
 import sys
 import time
 from pathlib import Path
-from pprint import pprint
 
 import joblib
 import numpy as np
@@ -28,6 +27,8 @@ from src.utils.functools import timed
 # constants
 ERROR_ARGS = 1
 ERROR_OTHER = 2
+
+TRY_COMMITSHA = False  #: try 'CommitSha' field if 'Sha' is missing
 
 
 # TODO: move to src/utils/helpers.py (or similar)
@@ -60,7 +61,7 @@ def find_commit_pair(source):
     if 'Sha' in source:
         commit = source['Sha']
         versus = None  # default to first parent of 'Sha'
-    elif 'CommitSha' in source:
+    elif TRY_COMMITSHA and 'CommitSha' in source:
         if isinstance(source['CommitSha'], str):
             commit = source['CommitSha']
             versus = None  # default to first parent of 'Sha'
@@ -102,12 +103,49 @@ def run_diff_to_conv(source, conv, compare, all_repos):
 def process_sharings(sharings_data, sharings_df, all_repos):
     total_conv_len = sharings_df['NumberOfChatgptSharings'].sum()
 
+    needs_augmenting = True
     if 'Sha' in sharings_data[0]:
         print(f"'Sha' in sharings_data[0]: {sharings_data[0]['Sha']}", file=sys.stderr)
+        needs_augmenting = False
     elif 'CommitSha' in sharings_data[0]:
         print(f"'CommitSha' in sharings_data[0]: {sharings_data[0]['CommitSha']}", file=sys.stderr)
+        if TRY_COMMITSHA:
+            needs_augmenting = False
+        else:
+            print(f"which will not be used because {TRY_COMMITSHA=}", file=sys.stderr)
     else:
         print("No 'Sha' or 'CommitSha' in sharings_data[0]", file=sys.stderr)
+
+    print(f"sharings_data needs augmenting with 'Sha' from sharings_df: {needs_augmenting}",
+          file=sys.stderr)
+    if needs_augmenting:
+        if 'Sha' not in sharings_df.columns:
+            print(f"No 'Sha' among sharings_df columns {sharings_df.shape}:\n"
+                  f"{sharings_df.columns}", file=sys.stderr)
+        else:
+            # TODO: handle the rare case when there is more than one 'Sha' for an 'URL'
+            # like there can be for issues (closed, reopened, closed again)
+            # currently the code uses last 'Sha' for given 'URL'
+
+            # list comprehension trick taken from
+            # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-pandas-dataframe/55557758#55557758
+            url_to_sha = {
+                url: sha
+                for url, sha in
+                zip(sharings_df['URL'], sharings_df['Sha'])
+            }
+            print(f"Found {len(url_to_sha)} 'URL' to 'Sha' mappings in sharings_df {sharings_df.shape}",
+                  file=sys.stderr)
+
+            n_added_sha = 0
+            for source in sharings_data:
+                if 'Sha' not in source:
+                    url = source['URL']
+                    if url in url_to_sha:
+                        source['Sha'] = url_to_sha[url]
+                        n_added_sha += 1
+            print(f"Added {n_added_sha} 'Sha' to sharings_data / {len(sharings_data)}",
+                  file=sys.stderr)
 
     with tqdm_joblib(tqdm(desc="process_sharings", total=total_conv_len)) as progress_bar:
         ret_similarities = joblib.Parallel(n_jobs=1000)(
