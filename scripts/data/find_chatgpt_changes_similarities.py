@@ -10,6 +10,7 @@ Example:
 """
 import contextlib
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -95,6 +96,15 @@ def run_diff_to_conv(source, conv, compare, all_repos):
         cmp_result = diff_to_conversation(curr_diff, conv, compare=compare, debug=True)
         return assoc_url, cmp_result, time.perf_counter() - start
 
+    except subprocess.CalledProcessError as err:
+        tqdm.write(f"CalledProcessError for {assoc_url}\n{err}")
+        tqdm.write(f"{repo_name=}, {commit=}, {versus=}")
+        if hasattr(err, 'stderr') and err.stderr:
+            if isinstance(err.stderr, (bytes, bytearray)):
+                tqdm.write(f"{err.stderr.decode('utf8')}-----")
+            else:
+                tqdm.write(f"{err.stderr}-----")
+        return assoc_url, {}, f"{type(err)} exception for {assoc_url}: {err}"
     except Exception as ex:
         tqdm.write(f"exception {type(ex)} for {assoc_url}:\n{ex}")
         return assoc_url, {}, f"{type(ex)} exception for {assoc_url}: {ex}"
@@ -133,6 +143,7 @@ def process_sharings(sharings_data, sharings_df, all_repos):
                 url: sha
                 for url, sha in
                 zip(sharings_df['URL'], sharings_df['Sha'])
+                if pd.notna(sha)
             }
             print(f"Found {len(url_to_sha)} 'URL' to 'Sha' mappings in sharings_df {sharings_df.shape}",
                   file=sys.stderr)
@@ -144,7 +155,7 @@ def process_sharings(sharings_data, sharings_df, all_repos):
                     if url in url_to_sha:
                         source['Sha'] = url_to_sha[url]
                         n_added_sha += 1
-            print(f"Added {n_added_sha} 'Sha' to sharings_data / {len(sharings_data)}",
+            print(f"Added {n_added_sha}/{len(url_to_sha)} 'Sha' to {len(sharings_data)} sharings_data",
                   file=sys.stderr)
 
     with tqdm_joblib(tqdm(desc="process_sharings", total=total_conv_len)) as progress_bar:
