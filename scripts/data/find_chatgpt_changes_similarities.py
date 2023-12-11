@@ -80,12 +80,12 @@ def run_diff_to_conv(source, conv, compare, all_repos):
     assoc_url = source['URL']
 
     if 'Conversations' not in conv:
-        tqdm.write(f"no 'Conversations' for {assoc_url}\n{conv.keys()=}, {conv['Status']=}")
+        tqdm.write(f"no 'Conversations' for {assoc_url} ({conv['Status']=})")
         return assoc_url, {}, f"no 'Conversations' for {assoc_url}"
 
     commit, versus = find_commit_pair(source)
     if commit is None:
-        tqdm.write(f"missing Sha or CommitSha for {assoc_url}")
+        # tqdm.write(f"missing Sha or CommitSha for {assoc_url}")
         return assoc_url, {}, f"missing Sha or CommitSha for {assoc_url}"
 
     try:
@@ -156,6 +156,8 @@ def process_sharings(sharings_data, sharings_df, all_repos):
                         source['Sha'] = url_to_sha[url]
                         n_added_sha += 1
             print(f"Added {n_added_sha}/{len(url_to_sha)} 'Sha' to {len(sharings_data)} sharings_data",
+                  file=sys.stderr)
+            print(f"There are {sum(1 for x in sharings_data if 'Sha' not in x)} sharings without 'Sha'",
                   file=sys.stderr)
 
     with tqdm_joblib(tqdm(desc="process_sharings", total=total_conv_len)) as progress_bar:
