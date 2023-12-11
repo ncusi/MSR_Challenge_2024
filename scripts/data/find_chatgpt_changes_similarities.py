@@ -208,6 +208,7 @@ def process_sharings(sharings_data, sharings_df, all_repos,
     if needs_augmenting:
         augment_sharings_data_with_sha(sharings_data, sharings_df)
 
+    start = time.perf_counter()
     with tqdm_joblib_batch(tqdm(desc="process_sharings", total=total_conv_len)) as progress_bar:
         ret_similarities = joblib.Parallel(n_jobs=1000)(
             joblib.delayed(run_diff_to_conv)(source, conv,
@@ -216,6 +217,7 @@ def process_sharings(sharings_data, sharings_df, all_repos,
             for conv in source['ChatgptSharing']
         )
         progress_bar.set_postfix_str('done')
+    par_time = time.perf_counter() - start
 
     print(f"There were {sum(1 for x in ret_similarities if not x[1])} problems "
           f"during the processing of {len(sharings_data)}/{total_conv_len} elements", file=sys.stderr)
@@ -224,7 +226,8 @@ def process_sharings(sharings_data, sharings_df, all_repos,
     print(f"Slowest at {max_time[2]} sec = {timedelta(seconds=max_time[2])}, "
           f"with {max_time[1]['ALL']['all']} 'postimage_all' was\n"
           f"  URL={max_time[0]}", file=sys.stderr)
-    print(f"Sum of all times is {sum_time} sec = {timedelta(seconds=sum_time)}", file=sys.stderr)
+    print(f"Sum of all times is {sum_time} sec = {timedelta(seconds=sum_time)} (serial)", file=sys.stderr)
+    print(f"Actual compute time {par_time} sec = {timedelta(seconds=par_time)} (joblib)", file=sys.stderr)
 
     if checkpoint_file_path is not None:
         print(f"Saving ret_similarities data ({len(ret_similarities)} elements)"
