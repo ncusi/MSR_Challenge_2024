@@ -173,7 +173,7 @@ def process_sharings(sharings_data, sharings_df, all_repos):
           f"during the processing of {len(sharings_data)}/{total_conv_len} elements", file=sys.stderr)
     max_time = max(ret_similarities, key=lambda x: x[2] if x[1] else 0.0)
     sum_time = sum(x[2] for x in ret_similarities if x[1])
-    print(f"Slowest at {max_time[2]} sec was with {len(max_time[1])} size for\n"
+    print(f"Slowest at {max_time[2]} sec was with {max_time[1]['ALL']['all']} 'postimage_all' for\n"
           f"  URL={max_time[0]}", file=sys.stderr)
     print(f"Sum of all times is {sum_time} sec (sequential time)", file=sys.stderr)
 
@@ -208,33 +208,33 @@ def process_sharings(sharings_data, sharings_df, all_repos):
             continue
 
         for file, file_data in sim_info['FILES'].items():
-            per_file_data = per_url_data
-            per_file_data.update({
+            per_file_data = {
+                **per_url_data,
                 'filename': file,
                 'path_a': file_data['FILE'][0],
                 'path_b': file_data['FILE'][1],
-            })
+            }
 
             if 'HUNKS' not in file_data:
                 stats['n_no_HUNKS'] += 1
                 continue
 
             for hunk_idx, hunk_data in file_data['HUNKS'].items():
-                per_hunk_data = per_file_data
-                per_hunk_data.update({
+                per_hunk_data = {
+                    **per_file_data,
                     'hunk_idx': hunk_idx,
                     'n_matched_lines': len(hunk_data['lines']),
                     'preimage_Prompt_ratio': hunk_data['pre']['p']['r'],
                     'postimage_Answer_ratio': hunk_data['post']['a']['r'],
                     'postimage_ListOfCode_ratio': hunk_data['post']['l']['r'],
                     # TODO: add other data, or save raw data as JSON/YAML/...
-                })
+                }
 
                 postimage_Answer_lines_ratio = {x[0]: x[2] for x in hunk_data['post']['A']}
                 postimage_ListOfCode_lines_ratio = {x[0]: x[2] for x in hunk_data['post']['L']}
                 for diff_line_no in hunk_data['lines']:
-                    per_line_data = per_hunk_data
-                    per_line_data.update({
+                    per_line_data = {
+                        **per_hunk_data,
                         'diff_line_no': diff_line_no,
                         'matches': True,
                         'postimage_Answer_line_ratio':
@@ -245,7 +245,7 @@ def process_sharings(sharings_data, sharings_df, all_repos):
                             postimage_ListOfCode_lines_ratio[diff_line_no]
                             if diff_line_no in postimage_ListOfCode_lines_ratio
                             else np.nan,
-                    })
+                    }
 
                     result_data.append(per_line_data)
 
