@@ -187,7 +187,7 @@ def process_single_commit(repo: GitRepo,
                          blamed_commits_data=all_blame_commit_data)
 
 
-def process_commit_changed_lines(repo: GitRepo,
+def process_commit_changed_lines(repo: GitRepo, url: str,
                                  project_name: str, gpt_commit: str,
                                  survival_info: dict, blamed_commits_info: dict,
                                  process_stats: dict) -> List[dict]:
@@ -211,8 +211,9 @@ def process_commit_changed_lines(repo: GitRepo,
 
     The returned data has the following structure (dicts on the list
     have the following keys):
+    - 'URL': URL to the mentioned source (that includes ChatGPT link)
     - 'RepoName': full name of repository, from DevGPT dataset, in which
-      commit identified `Sha` can e found
+      commit identified `Sha` can be found
     - 'Sha': SHA-1 identifier of commit from DevGPT, can be used for join
       (the same field name as in DevGPT dataset files)
     - 'Sha_filename': post-image name of file changed by `Sha` commit;
@@ -243,6 +244,8 @@ def process_commit_changed_lines(repo: GitRepo,
       but for `next_commit` commit, it it exists, else None / N/A
 
     :param GitRepo repo: local, cloned `project_name` repository
+    :param str url: URL of mentioned source (from DevGPT),
+        e.g. "https://github.com/sqlalchemy/sqlalchemy/commit/0df9759b73cb20818a35bd182697fac36dda3484"
     :param str project_name: name of the project (full name on GitHub)
         e.g. "sqlalchemy/sqlalchemy"
     :param str gpt_commit: commit from DevGPT dataset, for example one
@@ -293,6 +296,7 @@ def process_commit_changed_lines(repo: GitRepo,
 
             lines_data.append({
                 # the same field names as used in DevGPT dataset
+                'URL': url,
                 'RepoName': project_name,
                 'Sha': gpt_commit,
                 # field names renamed to be more meaningful
@@ -353,6 +357,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
     lines_data = []
     all_blamed_commits_info = defaultdict(dict)
     for row in tqdm(commits_df.itertuples(index=False, name='GptCommit'), desc='commit'):
+        url = row.URL
         project_name = row.RepoName
         gpt_commit = row.Sha
 
@@ -388,7 +393,7 @@ def process_commits(commits_df: pd.DataFrame, repo_clone_data: dict) -> Tuple[pd
             all_blamed_commits_info[project_name].update(blamed_commits_info)
 
         if survival_info is not None:
-            commit_lines_data = process_commit_changed_lines(repo, project_name, gpt_commit,
+            commit_lines_data = process_commit_changed_lines(repo, url, project_name, gpt_commit,
                                                              survival_info, all_blamed_commits_info[project_name],
                                                              total_stats)
             lines_data.extend(commit_lines_data)

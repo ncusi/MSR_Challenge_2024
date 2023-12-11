@@ -102,6 +102,13 @@ def run_diff_to_conv(source, conv, compare, all_repos):
 def process_sharings(sharings_data, sharings_df, all_repos):
     total_conv_len = sharings_df['NumberOfChatgptSharings'].sum()
 
+    if 'Sha' in sharings_data[0]:
+        print(f"'Sha' in sharings_data[0]: {sharings_data[0]['Sha']}", file=sys.stderr)
+    elif 'CommitSha' in sharings_data[0]:
+        print(f"'CommitSha' in sharings_data[0]: {sharings_data[0]['CommitSha']}", file=sys.stderr)
+    else:
+        print("No 'Sha' or 'CommitSha' in sharings_data[0]", file=sys.stderr)
+
     with tqdm_joblib(tqdm(desc="process_sharings", total=total_conv_len)) as progress_bar:
         ret_similarities = joblib.Parallel(n_jobs=1000)(
             joblib.delayed(run_diff_to_conv)(source, conv,
