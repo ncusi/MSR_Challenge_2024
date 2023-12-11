@@ -35,13 +35,13 @@ TRY_COMMITSHA = False  #: try 'CommitSha' field if 'Sha' is missing
 
 # TODO: move to src/utils/helpers.py (or similar)
 @contextlib.contextmanager
-def tqdm_joblib(tqdm_object):
+def tqdm_joblib_batch(tqdm_object):
     """Context manager to patch joblib to report into tqdm progress bar given as argument
 
     Example:
         >>> from math import sqrt
         >>> from joblib import Parallel, delayed
-        >>> with tqdm_joblib(tqdm(desc="My calculation", total=10)) as progress_bar:
+        >>> with tqdm_joblib_batch(tqdm(desc="My calculation", total=10)) as progress_bar:
         ...     Parallel(n_jobs=16)(delayed(sqrt)(i**2) for i in range(10))
     """
 
@@ -56,6 +56,40 @@ def tqdm_joblib(tqdm_object):
         yield tqdm_object
     finally:
         joblib.parallel.BatchCompletionCallBack = old_batch_callback
+        tqdm_object.close()
+
+
+# TODO: move to src/utils/helpers.py (or similar)
+@contextlib.contextmanager
+def tqdm_joblib_progress(tqdm_object):
+    """Context manager to patch joblib to report into tqdm progress bar given as argument
+
+    Example:
+        >>> import time
+        >>> from joblib import Parallel, delayed
+        >>> from tqdm import tqdm
+        >>>
+        >>> def some_method(wait_time):
+        >>>     time.sleep(wait_time)
+        >>>
+        >>> with tqdm_joblib_progress(tqdm(desc="My method", total=10)) as progress_bar:
+        >>>     Parallel(n_jobs=2)(delayed(some_method)(0.2) for i in range(10))
+
+    More detailed description of code on StackOverflow, where it was taken from
+    https://stackoverflow.com/questions/24983493/tracking-progress-of-joblib-parallel-execution/61689175#61689175
+    """
+    def tqdm_print_progress(self):
+        if self.n_completed_tasks > tqdm_object.n:
+            n_completed = self.n_completed_tasks - tqdm_object.n
+            tqdm_object.update(n=n_completed)
+
+    original_print_progress = joblib.parallel.Parallel.print_progress
+    joblib.parallel.Parallel.print_progress = tqdm_print_progress
+
+    try:
+        yield tqdm_object
+    finally:
+        joblib.parallel.Parallel.print_progress = original_print_progress
         tqdm_object.close()
 
 
@@ -162,7 +196,7 @@ def process_sharings(sharings_data, sharings_df, all_repos,
             print(f"There are {sum(1 for x in sharings_data if 'Sha' not in x)} sharings without 'Sha'",
                   file=sys.stderr)
 
-    with tqdm_joblib(tqdm(desc="process_sharings", total=total_conv_len)) as progress_bar:
+    with tqdm_joblib_batch(tqdm(desc="process_sharings", total=total_conv_len)) as progress_bar:
         ret_similarities = joblib.Parallel(n_jobs=1000)(
             joblib.delayed(run_diff_to_conv)(source, conv,
                                              compare=CompareFragments, all_repos=all_repos)
