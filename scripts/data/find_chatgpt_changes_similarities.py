@@ -110,7 +110,8 @@ def run_diff_to_conv(source, conv, compare, all_repos):
         return assoc_url, {}, f"{type(ex)} exception for {assoc_url}: {ex}"
 
 
-def process_sharings(sharings_data, sharings_df, all_repos):
+def process_sharings(sharings_data, sharings_df, all_repos,
+                     checkpoint_file_path=None):
     total_conv_len = sharings_df['NumberOfChatgptSharings'].sum()
 
     needs_augmenting = True
@@ -176,6 +177,12 @@ def process_sharings(sharings_data, sharings_df, all_repos):
     print(f"Slowest at {max_time[2]} sec was with {max_time[1]['ALL']['all']} 'postimage_all' for\n"
           f"  URL={max_time[0]}", file=sys.stderr)
     print(f"Sum of all times is {sum_time} sec (sequential time)", file=sys.stderr)
+
+    if checkpoint_file_path is not None:
+        print(f"Saving ret_similarities data ({len(ret_similarities)} elements)"
+              f"to '{checkpoint_file_path}'", file=sys.stderr)
+        with open(checkpoint_file_path, 'w') as checkpoint_file:
+            json.dump(ret_similarities, checkpoint_file)
 
     # TODO: extract into separate function
     sharings_dict = { source['URL']: source for source in sharings_data }
@@ -323,7 +330,10 @@ def main():
 
     # .......................................................................
     # PROCESSING
-    output_df = process_sharings(sharings_data, sharings_df, all_repos)
+    checkpoint_file_path = output_file_path.with_suffix('.json')
+
+    output_df = process_sharings(sharings_data, sharings_df, all_repos,
+                                 checkpoint_file_path)
 
     # .......................................................................
     # SAVING RESULTS
