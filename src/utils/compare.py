@@ -185,7 +185,7 @@ class CompareFragments(CompareBase):
                     self.pos["l"] = lno
 
     # Max version
-    def final(self, cutoff=0.5,
+    def final(self, cutoff=0.6,
               ret_chat_line_no=False, ret_score=False):
         """Final result of sequence of compare()'s
 
