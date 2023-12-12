@@ -15,3 +15,9 @@
 /issue_sharings_groupby_repo_df.csv
 /issue_sharings_changes_survival_df.csv
 /issue_sharings_lines_survival_df.csv
+/commit_sharings_similarities_df.csv
+/commit_sharings_similarities_df.checkpoint_data.json
+/pr_mergesha_sharings_similarities_df.csv
+/pr_mergesha_sharings_similarities_df.checkpoint_data.json
+/issue_sharings_similarities_df.csv
+/issue_sharings_similarities_df.checkpoint_data.json

@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Usage: {script_name} <dataset_path> <sharings_df> <repositories.json> <output_similarities_df>
+"""Usage: {script_name} (<dataset_path>|<dataset_file>) <sharings_df> <repositories.json> <output_similarities_df>
+
+Find and compute similarities between ChatGPT conversations (prompts, answers,
+code blocks), and pre-image and post-image of changes associated with given
+ChatGPT mention.
+
+If first argument is <dataset_path>, a path to where DevGPT dataset can be found,
+then the sharings file is selected according to guess about where <sharings_df>
+came from.  The JSON sharing file from DevGPT dataset (guessed or <dataset_file>)
+and the dataframe with augmented sharings information in CSV format (<sharings_df>)
+must match.
+
+Use information from <repositories.json> to find cloned project repositories.
+These are then used to extract diff of changes (of commit) associated with
+the ChatGPT mentioning (shared ChatGPT link).
+
+NOTE: to avoid costly computations it stores their checkpoint in JSON file.
 
 Example:
     python scripts/data/find_chatgpt_changes_similarity.py \\
@@ -40,6 +56,7 @@ def tqdm_joblib_batch(tqdm_object):
 
     Example:
         >>> from math import sqrt
+        >>> from tqdm import tqdm
         >>> from joblib import Parallel, delayed
         >>> with tqdm_joblib_batch(tqdm(desc="My calculation", total=10)) as progress_bar:
         ...     Parallel(n_jobs=16)(delayed(sqrt)(i**2) for i in range(10))
