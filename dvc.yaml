@@ -155,3 +155,20 @@ stages:
       - data/repositories_download_status.json
     outs:
       - data/interim/repository_statistics_github.json
+
+  commit_similarities:
+    desc: 'ChatGPT <-> commit diff similarities for commit sharings'
+    cmd: >-
+      python scripts/data/find_chatgpt_changes_similarities.py
+      data/external/DevGPT/ data/interim/commit_sharings_df.csv
+      data/repositories_download_status.json
+      data/interim/commit_sharings_similarities_df.csv
+    deps:
+      - scripts/data/find_chatgpt_changes_similarities.py
+      - data/external/DevGPT/
+      - data/interim/commit_sharings_df.csv
+      - data/repositories_download_status.json
+    outs:
+      - data/interim/commit_sharings_similarities_df.csv
+      - data/interim/commit_sharings_similarities_df.checkpoint_data.json:
+          persist: true
