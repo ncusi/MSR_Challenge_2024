@@ -172,3 +172,37 @@ stages:
       - data/interim/commit_sharings_similarities_df.csv
       - data/interim/commit_sharings_similarities_df.checkpoint_data.json:
           persist: true
+
+  pr_similarities:
+    desc: 'ChatGPT <-> commit diff similarities for PR sharings'
+    cmd: >-
+      python scripts/data/find_chatgpt_changes_similarities.py
+      data/external/DevGPT/ data/interim/pr_sharings_df.csv
+      data/repositories_download_status.json
+      data/interim/pr_mergesha_sharings_similarities_df.csv
+    deps:
+      - scripts/data/find_chatgpt_changes_similarities.py
+      - data/external/DevGPT/
+      - data/interim/pr_sharings_df.csv
+      - data/repositories_download_status.json
+    outs:
+      - data/interim/pr_mergesha_sharings_similarities_df.csv
+      - data/interim/pr_mergesha_sharings_similarities_df.checkpoint_data.json:
+          persist: true
+
+  issue_similarities:
+    desc: 'ChatGPT <-> commit diff similarities for issue sharings'
+    cmd: >-
+      python scripts/data/find_chatgpt_changes_similarities.py
+      data/external/DevGPT/ data/interim/issue_sharings_df.csv
+      data/repositories_download_status.json
+      data/interim/issue_sharings_similarities_df.csv
+    deps:
+      - scripts/data/find_chatgpt_changes_similarities.py
+      - data/external/DevGPT/
+      - data/interim/issue_sharings_df.csv
+      - data/repositories_download_status.json
+    outs:
+      - data/interim/issue_sharings_similarities_df.csv
+      - data/interim/issue_sharings_similarities_df.checkpoint_data.json:
+          persist: true
