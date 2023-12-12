@@ -260,3 +260,93 @@ stages:
       hash: md5
       md5: b2461f13359cfeb23ecc0170957af687
       size: 25476881
+  commit_similarities:
+    cmd: python scripts/data/find_chatgpt_changes_similarities.py data/external/DevGPT/
+      data/interim/commit_sharings_df.csv data/repositories_download_status.json data/interim/commit_sharings_similarities_df.csv
+    deps:
+    - path: data/external/DevGPT/
+      hash: md5
+      md5: 223e6501a84a339b341bfb843595d1b2.dir
+      size: 4182300528
+      nfiles: 65
+    - path: data/interim/commit_sharings_df.csv
+      hash: md5
+      md5: dee35aeb0d0b7fa354b0022f9bd998a1
+      size: 484886
+    - path: data/repositories_download_status.json
+      hash: md5
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
+    - path: scripts/data/find_chatgpt_changes_similarities.py
+      hash: md5
+      md5: f03016677efbf785050bf58ef967389e
+      size: 18579
+    outs:
+    - path: data/interim/commit_sharings_similarities_df.checkpoint_data.json
+      hash: md5
+      md5: d0681a952d0715de7a5ad05c9fad7d1e
+      size: 6990471
+    - path: data/interim/commit_sharings_similarities_df.csv
+      hash: md5
+      md5: f8ed4db14670b3f53d12424b750155d7
+      size: 17490798
+  pr_similarities:
+    cmd: python scripts/data/find_chatgpt_changes_similarities.py data/external/DevGPT/
+      data/interim/pr_sharings_df.csv data/repositories_download_status.json data/interim/pr_mergesha_sharings_similarities_df.csv
+    deps:
+    - path: data/external/DevGPT/
+      hash: md5
+      md5: 223e6501a84a339b341bfb843595d1b2.dir
+      size: 4182300528
+      nfiles: 65
+    - path: data/interim/pr_sharings_df.csv
+      hash: md5
+      md5: 343abf1b666b59e70e9f9ddd10762642
+      size: 771169
+    - path: data/repositories_download_status.json
+      hash: md5
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
+    - path: scripts/data/find_chatgpt_changes_similarities.py
+      hash: md5
+      md5: f03016677efbf785050bf58ef967389e
+      size: 18579
+    outs:
+    - path: data/interim/pr_mergesha_sharings_similarities_df.checkpoint_data.json
+      hash: md5
+      md5: 38fa01197e48f529a3dbed4aa46dc653
+      size: 5704439
+    - path: data/interim/pr_mergesha_sharings_similarities_df.csv
+      hash: md5
+      md5: 035a37ddef5afd506f95fc3ee0de6acb
+      size: 7955642
+  issue_similarities:
+    cmd: python scripts/data/find_chatgpt_changes_similarities.py data/external/DevGPT/
+      data/interim/issue_sharings_df.csv data/repositories_download_status.json data/interim/issue_sharings_similarities_df.csv
+    deps:
+    - path: data/external/DevGPT/
+      hash: md5
+      md5: 223e6501a84a339b341bfb843595d1b2.dir
+      size: 4182300528
+      nfiles: 65
+    - path: data/interim/issue_sharings_df.csv
+      hash: md5
+      md5: 3efdd8aa822b83dd02978dd323313e52
+      size: 718852
+    - path: data/repositories_download_status.json
+      hash: md5
+      md5: 985cc0f559f68de003cea224e8a7bc4d
+      size: 177064
+    - path: scripts/data/find_chatgpt_changes_similarities.py
+      hash: md5
+      md5: f03016677efbf785050bf58ef967389e
+      size: 18579
+    outs:
+    - path: data/interim/issue_sharings_similarities_df.checkpoint_data.json
+      hash: md5
+      md5: 02eb0ad8237c23192f7db1eab5c1c150
+      size: 1014307
+    - path: data/interim/issue_sharings_similarities_df.csv
+      hash: md5
+      md5: e5de736e9621fef7af71e8d20ca57ea3
+      size: 1012465
