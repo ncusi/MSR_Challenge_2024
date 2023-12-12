@@ -1,0 +1,5 @@
+outs:
+- md5: e228c3f1d54f6b4a7611259eae099cc7
+  size: 601438
+  hash: md5
+  path: compare-ret_fragments_commit.json

@@ -1,0 +1,5 @@
+outs:
+- md5: 0ecc0e0bfd0e6a579e4ad0c1cc0d15b3
+  size: 285315
+  hash: md5
+  path: compare-ret_fragments_pr.json
