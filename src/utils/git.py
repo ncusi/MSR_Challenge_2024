@@ -325,6 +325,76 @@ def changes_survival_perc(lines_survival):
     return lines_survived, lines_total
 
 
+def decode_c_quoted_str(text):
+    """C-style name unquoting
+
+    See unquote_c_style() function in 'quote.c' file in git/git source code
+    https://github.com/git/git/blob/master/quote.c#L401
+
+    This is subset of escape sequences supported by C and C++
+    https://learn.microsoft.com/en-us/cpp/c-language/escape-sequences
+
+    :param str text: string which may be c-quoted
+    :return: decoded string
+    :rtype: str
+    """
+    quoted = text.startswith('"') and text.endswith('"')
+    if quoted:
+        text = text[1:-1]  # remove quotes
+
+        buf = bytearray()
+        escaped = False
+        oct_str = ''
+        for ch in text:
+            if not escaped:
+                if ch != '\\':
+                    buf.append(ord(ch))
+                else:
+                    escaped = True
+                    oct_str = ''
+            else:
+                match ch:
+                    case '"' | '\\':
+                        buf.append(ord(ch))
+                        escaped = False
+                    case 'a':
+                        buf.append(ord("\a"))  # Bell (alert)
+                        escaped = False
+                    case 'b':
+                        buf.append(ord("\b"))  # Backspace
+                        escaped = False
+                    case 'f':
+                        buf.append(ord("\f"))  # Form feed
+                        escaped = False
+                    case 'n':
+                        buf.append(ord("\n"))  # New line
+                        escaped = False
+                    case 'r':
+                        buf.append(ord("\r"))  # Carriage return
+                        escaped = False
+                    case 't':
+                        buf.append(ord("\t"))  # Horizontal tab
+                        escaped = False
+                    case 'v':
+                        buf.append(ord("\v"))  # Vertical tab
+                        escaped = False
+                    case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7':
+                        oct_str += ch
+                        if len(oct_str) == 3:
+                            buf.append(int(oct_str, base=8))  # byte in octal notation
+                            escaped = False
+                            oct_str = ''
+                    case _:
+                        raise ValueError(f'Unexpected character {ch} in escape sequence when parsing "{text}"')
+
+        if escaped:
+            raise ValueError(f'Unfinished escape sequence when parsing "{text}"')
+
+        text = buf.decode()
+
+    return text
+
+
 class GitRepo:
     """Class representing Git repository, for performing operations on"""
     path_encoding = 'utf8'

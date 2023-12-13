@@ -11,7 +11,25 @@ from unidiff import PatchSet
 
 from src.tests import slow_test
 from src.utils.git import (GitRepo, DiffSide, AuthorStat,
-                           changes_survival_perc, parse_shortlog_count, select_core_authors)
+                           changes_survival_perc, parse_shortlog_count, select_core_authors,
+                           decode_c_quoted_str)
+
+
+class FunctionsTestCase(unittest.TestCase):
+    """Test helper functions that do not require Git repository"""
+    def test_decode_c_quoted_str(self):
+        self.assertEqual(r'simple text',
+                         decode_c_quoted_str(r'simple text'),
+                         'non-encoded text passthrough')
+        self.assertEqual(r'some text\with slash and "quote"',
+                         decode_c_quoted_str(r'"some text\\with slash and \"quote\""'),
+                         'c-quoted quotation marks and backslashes')
+        self.assertEqual('some text with \t tab',  # not raw, with literal TAB character
+                         decode_c_quoted_str(r'"some text with \t tab"'),
+                         'c-quoted tab character')
+        self.assertEqual(r'zażółć',
+                         decode_c_quoted_str(r'"za\305\274\303\263\305\202\304\207"'),
+                         'c-quoted utf8')
 
 
 class GitTestCase(unittest.TestCase):
