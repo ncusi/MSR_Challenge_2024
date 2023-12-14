@@ -374,7 +374,10 @@ def decode_c_quoted_str(text):
                 elif '0' <= ch <= '7':  # octal values with first digit over 4 overflow
                     oct_str += ch
                     if len(oct_str) == 3:
-                        buf.append(int(oct_str, base=8))  # byte in octal notation
+                        byte = int(oct_str, base=8)  # byte in octal notation
+                        if byte > 256:
+                            raise ValueError(f'Invalid octal escape sequence \\{oct_str} in "{text}"')
+                        buf.append(byte)
                         escaped = False
                         oct_str = ''
                 else:

@@ -43,6 +43,9 @@ class FunctionsTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             decode_c_quoted_str(r'"unfinished octal escape \30"')
 
+        with self.assertRaises(ValueError):
+            decode_c_quoted_str(r'"\305\477"')
+
 
 class GitTestCase(unittest.TestCase):
     repo_path = 'test_utils_git-repo'
