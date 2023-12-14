@@ -172,8 +172,6 @@ def _parse_blame_porcelain(blame_text):
     Note that without '--line-porcelain' information about specific commit
     is provided only once.
 
-    TODO: decode c-quoted filenames
-
     :param str blame_text: standard output from running the
         'git blame --porcelain [--reverse]' command
     :return: information about commits (dict) and information about lines (list)
@@ -207,10 +205,7 @@ def _parse_blame_porcelain(blame_text):
                 'final': match.group('final')
             }
             if curr_commit in commits_data:
-                # TODO: unquote c-quoted filename, if needed (like in unidiff/patch.py)
-                # quoted = filepath.startswith('"') and filepath.endswith('"')
-                # filepath = '"{}"'.format(filepath) if quoted else filepath
-                curr_line['original_filename'] = commits_data[curr_commit]['filename']
+                curr_line['original_filename'] = decode_c_quoted_str(commits_data[curr_commit]['filename'])
 
                 # TODO: move extracting 'previous_filename' here, unquote if needed
 
@@ -232,7 +227,7 @@ def _parse_blame_porcelain(blame_text):
             commits_data[curr_commit][key] = value
             # add 'filename' as 'original_filename' to line info
             if key == 'filename':
-                curr_line['original_filename'] = value
+                curr_line['original_filename'] = decode_c_quoted_str(value)
 
     return commits_data, line_data
 
