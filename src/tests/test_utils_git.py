@@ -31,6 +31,18 @@ class FunctionsTestCase(unittest.TestCase):
                          decode_c_quoted_str(r'"za\305\274\303\263\305\202\304\207"'),
                          'c-quoted utf8')
 
+        with self.assertRaises(ValueError):
+            decode_c_quoted_str(r'"unknown escape \x"')
+
+        with self.assertRaises(ValueError):
+            decode_c_quoted_str(r'"interrupted octal escape \30z"')
+
+        with self.assertRaises(ValueError):
+            decode_c_quoted_str(r'"unfinished escape \"')
+
+        with self.assertRaises(ValueError):
+            decode_c_quoted_str(r'"unfinished octal escape \30"')
+
 
 class GitTestCase(unittest.TestCase):
     repo_path = 'test_utils_git-repo'
