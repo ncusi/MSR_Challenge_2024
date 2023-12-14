@@ -338,13 +338,25 @@ def decode_c_quoted_str(text):
     :return: decoded string
     :rtype: str
     """
+    # TODO?: Make it a global variable
+    escape_dict = {
+        'a': '\a',  # Bell (alert)
+        'b': '\b',  # Backspace
+        'f': '\f',  # Form feed
+        'n': '\n',  # New line
+        'r': '\r',  # Carriage return
+        't': '\t',  # Horizontal tab
+        'v': '\v',  # Vertical tab
+    }
+
     quoted = text.startswith('"') and text.endswith('"')
     if quoted:
         text = text[1:-1]  # remove quotes
 
         buf = bytearray()
-        escaped = False
+        escaped = False  # TODO?: switch to state = 'NORMAL', 'ESCAPE', 'ESCAPE_OCTAL'
         oct_str = ''
+
         for ch in text:
             if not escaped:
                 if ch != '\\':
@@ -353,39 +365,20 @@ def decode_c_quoted_str(text):
                     escaped = True
                     oct_str = ''
             else:
-                match ch:
-                    case '"' | '\\':
-                        buf.append(ord(ch))
+                if ch in ('"', '\\'):
+                    buf.append(ord(ch))
+                    escaped = False
+                elif ch in escape_dict:
+                    buf.append(ord(escape_dict[ch]))
+                    escaped = False
+                elif '0' <= ch <= '7':  # octal values with first digit over 4 overflow
+                    oct_str += ch
+                    if len(oct_str) == 3:
+                        buf.append(int(oct_str, base=8))  # byte in octal notation
                         escaped = False
-                    case 'a':
-                        buf.append(ord("\a"))  # Bell (alert)
-                        escaped = False
-                    case 'b':
-                        buf.append(ord("\b"))  # Backspace
-                        escaped = False
-                    case 'f':
-                        buf.append(ord("\f"))  # Form feed
-                        escaped = False
-                    case 'n':
-                        buf.append(ord("\n"))  # New line
-                        escaped = False
-                    case 'r':
-                        buf.append(ord("\r"))  # Carriage return
-                        escaped = False
-                    case 't':
-                        buf.append(ord("\t"))  # Horizontal tab
-                        escaped = False
-                    case 'v':
-                        buf.append(ord("\v"))  # Vertical tab
-                        escaped = False
-                    case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7':
-                        oct_str += ch
-                        if len(oct_str) == 3:
-                            buf.append(int(oct_str, base=8))  # byte in octal notation
-                            escaped = False
-                            oct_str = ''
-                    case _:
-                        raise ValueError(f'Unexpected character {ch} in escape sequence when parsing "{text}"')
+                        oct_str = ''
+                else:
+                    raise ValueError(f'Unexpected character \'{ch}\' in escape sequence when parsing "{text}"')
 
         if escaped:
             raise ValueError(f'Unfinished escape sequence when parsing "{text}"')
