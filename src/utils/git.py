@@ -8,11 +8,11 @@ Usage:
 ------
 Example usage:
   >>> from src.utils.git import GitRepo
-  >>> files = GitRepo('path/to/git/repo').list_files('HEAD') # 'HEAD' is the default
+  >>> files = GitRepo('path/to/git/repo').list_files('HEAD')  # 'HEAD' is the default
   ...     ...
 
 This implementation / backend retrieves data by calling `git` via
-`subprocess.Popen`, and parsing the output.
+`subprocess.Popen` or `subprocess.run`, and parsing the output.
 
 WARNING: at the time this backend does not have error handling implemented;
 it would simply return empty result, without any notification about the
@@ -54,6 +54,24 @@ class AuthorStat(NamedTuple):
 
 
 def _parse_authorship_info(authorship_line, field_name='author'):
+    """Parse author/committer info, and extract individual parts
+
+    Extract author or committer 'name', 'email', creation time of changes
+    or commit as 'timestamp', and timezone information ('tz_info') from
+    authorship line, for example:
+
+        Jakub Narębski <jnareb@mat.umk.pl> 1702424295 +0100
+
+    Requires raw format; it does not parse any other datetime format
+    than UNIX timestamp.
+
+    :param str authorship_line: string with authorship info to parse
+    :param str field_name: name of field to store 'name'+'email'
+        (for example "Jakub Narębski <jnareb@mat.umk.pl>"), should be
+        either 'author' or 'committer'.
+    :return: dict with parsed authorship information
+    :rtype: dict[str, str | int]
+    """
     # trick from https://stackoverflow.com/a/279597/
     if not hasattr(_parse_authorship_info, 'regexp'):
         # runs only once
@@ -72,9 +90,23 @@ def _parse_authorship_info(authorship_line, field_name='author'):
 
 
 def _parse_commit_text(commit_text, with_parents_line=True, indented_body=True):
+    """Helper function for GitRepo.get_commit_metadata()
+
+    The default values of `with_parents_line` and `indented_body` parameters
+    are selected for parsing output of 'git rev-list --parents --header'
+    (that is used by GitRepo.get_commit_metadata()).
+
+    :param str commit_text: text to parse
+    :param bool with_parents_line: whether first line of `commit_text`
+        is '<commit id> [<parent id>...]' line
+    :param bool indented_body: whether commit message text is prefixed
+        (indented) with 4 spaces: '    '
+    :return: commit metadata extracted from parsed `commit_text`
+    :rtype: dict[str, str | list[str] | dict] or None
+    """
     # based on `parse_commit_text` from gitweb/gitweb.perl in git project
     # NOTE: cannot use .splitlines() here
-    commit_lines = commit_text.split('\n')[:-1]  # remove trailing '\n'
+    commit_lines = commit_text.split('\n')[:-1]  # remove trailing '' after last '\n'
 
     if not commit_lines:
         return None
@@ -113,6 +145,38 @@ def _parse_commit_text(commit_text, with_parents_line=True, indented_body=True):
 
 
 def _parse_blame_porcelain(blame_text):
+    """Parse 'git blame --porcelain' output and extract information
+
+    In the porcelain format, each line is output after a header; the header
+    at the minimum has the first line which has:
+     - 40-byte SHA-1 of the commit the line is attributed to;
+     - the line number of the line in the original file;
+     - the line number of the line in the final file;
+     - on a line that starts a group of lines from a different commit
+       than the previous one, the number of lines in this group.
+       On subsequent lines this field is absent.
+
+    This header line is followed by the following information at least once
+    for each commit:
+     - the author name ("author"), email ("author-mail"), time ("author-time"),
+       and time zone ("author-tz"); similarly for committer.
+     - the filename ("filename") in the commit that the line is attributed to.
+     - the first line of the commit log message ("summary").
+
+    Additionally, the following information may be present:
+     - "previous" line with 40-byte SHA-1 of commit previous to the one that
+       the line is attributed to, if there is any (this is parent commit for
+       normal blame, and child commit for reverse blame), and the filename
+       in this 'previous' commit
+
+    Note that without '--line-porcelain' information about specific commit
+    is provided only once.
+
+    :param str blame_text: standard output from running the
+        'git blame --porcelain [--reverse]' command
+    :return: information about commits (dict) and information about lines (list)
+    :rtype: (dict, list)
+    """
     # trick from https://stackoverflow.com/a/279597/
     if not hasattr(_parse_blame_porcelain, 'regexp'):
         # runs only once
@@ -141,10 +205,7 @@ def _parse_blame_porcelain(blame_text):
                 'final': match.group('final')
             }
             if curr_commit in commits_data:
-                # TODO: unquote c-quoted filename, if needed (like in unidiff/patch.py)
-                # quoted = filepath.startswith('"') and filepath.endswith('"')
-                # filepath = '"{}"'.format(filepath) if quoted else filepath
-                curr_line['original_filename'] = commits_data[curr_commit]['filename']
+                curr_line['original_filename'] = decode_c_quoted_str(commits_data[curr_commit]['filename'])
 
                 # TODO: move extracting 'previous_filename' here, unquote if needed
 
@@ -166,7 +227,7 @@ def _parse_blame_porcelain(blame_text):
             commits_data[curr_commit][key] = value
             # add 'filename' as 'original_filename' to line info
             if key == 'filename':
-                curr_line['original_filename'] = value
+                curr_line['original_filename'] = decode_c_quoted_str(value)
 
     return commits_data, line_data
 
@@ -242,6 +303,13 @@ def select_core_authors(authors_stats: list[AuthorStat],
 
 
 def changes_survival_perc(lines_survival):
+    """Count fraction of surviving lines from GitRepo.changes_survival() output
+
+    :param dict[str, list[dict]] lines_survival: the second element in
+        tuple retured by GitRepo.changes_survival()
+    :return: number of surviving lines and total number of lines
+    :rtype: (int, int)
+    """
     lines_total = 0
     lines_survived = 0
     for _, lines_info in lines_survival.items():
@@ -250,6 +318,72 @@ def changes_survival_perc(lines_survival):
                               if 'previous' not in line_data)
 
     return lines_survived, lines_total
+
+
+def decode_c_quoted_str(text):
+    """C-style name unquoting
+
+    See unquote_c_style() function in 'quote.c' file in git/git source code
+    https://github.com/git/git/blob/master/quote.c#L401
+
+    This is subset of escape sequences supported by C and C++
+    https://learn.microsoft.com/en-us/cpp/c-language/escape-sequences
+
+    :param str text: string which may be c-quoted
+    :return: decoded string
+    :rtype: str
+    """
+    # TODO?: Make it a global variable
+    escape_dict = {
+        'a': '\a',  # Bell (alert)
+        'b': '\b',  # Backspace
+        'f': '\f',  # Form feed
+        'n': '\n',  # New line
+        'r': '\r',  # Carriage return
+        't': '\t',  # Horizontal tab
+        'v': '\v',  # Vertical tab
+    }
+
+    quoted = text.startswith('"') and text.endswith('"')
+    if quoted:
+        text = text[1:-1]  # remove quotes
+
+        buf = bytearray()
+        escaped = False  # TODO?: switch to state = 'NORMAL', 'ESCAPE', 'ESCAPE_OCTAL'
+        oct_str = ''
+
+        for ch in text:
+            if not escaped:
+                if ch != '\\':
+                    buf.append(ord(ch))
+                else:
+                    escaped = True
+                    oct_str = ''
+            else:
+                if ch in ('"', '\\'):
+                    buf.append(ord(ch))
+                    escaped = False
+                elif ch in escape_dict:
+                    buf.append(ord(escape_dict[ch]))
+                    escaped = False
+                elif '0' <= ch <= '7':  # octal values with first digit over 4 overflow
+                    oct_str += ch
+                    if len(oct_str) == 3:
+                        byte = int(oct_str, base=8)  # byte in octal notation
+                        if byte > 256:
+                            raise ValueError(f'Invalid octal escape sequence \\{oct_str} in "{text}"')
+                        buf.append(byte)
+                        escaped = False
+                        oct_str = ''
+                else:
+                    raise ValueError(f'Unexpected character \'{ch}\' in escape sequence when parsing "{text}"')
+
+        if escaped:
+            raise ValueError(f'Unfinished escape sequence when parsing "{text}"')
+
+        text = buf.decode()
+
+    return text
 
 
 class GitRepo:
@@ -831,6 +965,15 @@ class GitRepo:
         return result
 
     def to_oid(self, obj):
+        """Convert object reference to object identifier
+
+        Returns None if object `obj` is not present in the repository
+
+        :param str obj: object reference, for example "HEAD" or "main^",
+            see e.g. https://git-scm.com/docs/gitrevisions
+        :return: SHA-1 identifier of object, or None if object is not found
+        :rtype: str or None
+        """
         cmd = [
             'git', '-C', self.repo,
             'rev-parse', '--verify', '--end-of-options', obj
@@ -845,9 +988,27 @@ class GitRepo:
         return process.stdout.decode('latin1').strip()
 
     def is_valid_commit(self, commit):
+        """Check if `commit` is present in the repository as a commit
+
+        :param str commit: reference to a commit, for example "HEAD" or "main",
+            or "fc6db4e600d633d6fc206217e70641bbb78cbc53^"
+        :return: whether `commit` is a valid commit in repo
+        :rtype: bool
+        """
         return self.to_oid(str(commit)+'^{commit}') is not None
 
     def get_current_branch(self):
+        """Return short name of the current branch
+
+        It returns name of the branch, e.g. "main", rather than fully
+        qualified name (full name), e.g. "refs/heads/main".
+
+        Will return None if there is no current branch, that is if
+        repo is in the 'detached HEAD' state.
+
+        :return: name of the current branch
+        :rtype: str or None
+        """
         cmd = [
             'git', '-C', self.repo,
             'symbolic-ref', '--quiet', '--short', 'HEAD'
@@ -862,6 +1023,15 @@ class GitRepo:
         return process.stdout.strip()
 
     def resolve_symbolic_ref(self, ref='HEAD'):
+        """Return full name of reference `ref` symbolic ref points to
+
+        If `ref` is not symbolic reference (e.g. ref='HEAD' and detached
+        HEAD state) it returns None.
+
+        :param str ref: name of the symbolic reference, e.g. "HEAD"
+        :return: resolved `ref`
+        :rtype: str or None
+        """
         cmd = [
             'git', '-C', self.repo,
             'symbolic-ref', '--quiet', str(ref)
@@ -925,6 +1095,35 @@ class GitRepo:
         return process.stdout.splitlines()
 
     def reverse_blame(self, commit, file, ref_pattern='HEAD', line_extents=None):
+        """Find what revision each line of file at commit was modified since
+
+        For each line of `file` (or subset of lines selected by `line_extents`),
+        find how long it did survive starting from `commit`, that is find the last
+        revision at which the line is yet present in the history.
+
+        The origin of lines is automatically followed across whole-file renames;
+        currently there is no option to tell this function to follow lines as they
+        are copied and pasted into another file (TODO).
+
+        In reverse blame, history is walked forward (from 'HEAD') instead of backward.
+        Instead of showing the revision in which a line appeared, this shows the last
+        revision in which a line has existed.
+
+        :param str commit: where to start examine history from
+        :param file: file to perform blame on (as a whole, or only selected lines)
+        :type file: str or PathLike
+        :param ref_pattern: <pattern>…, that is a pattern or list of patterns;
+            check each ref that match against at least one patterns, either using
+            fnmatch(3) or literally, in the latter case matching completely,
+            or from the beginning up to a slash.  Defaults to 'HEAD'.
+            *NOTE*: currently unused, 'HEAD' is always used.
+        :type ref_pattern: str or list[str]
+        :param line_extents: which lines to blame, provided as list of line
+            ranges (as extents: [(<beg>,<end>),...]), optional
+        :type line_extents: list[tuple[int, int]] or None
+        :return: information about commits (dict) and information about lines (list)
+        :rtype: (dict, list)
+        """
         ref_pattern = self._to_refs_list(ref_pattern)
 
         line_args = []
@@ -936,7 +1135,7 @@ class GitRepo:
             'git', '-C', self.repo,
             'blame', '--reverse', commit, '--porcelain',
             *line_args,
-            file
+            str(file)
         ]
         process = subprocess.run(cmd, capture_output=True, check=True)
 
@@ -955,6 +1154,53 @@ class GitRepo:
 
     def changes_survival(self, commit, prev=None,
                          addition_optimization=False):
+        """Find what revision each line of `commit` changes was modified since
+
+        This performs reverse blame for each file modified in diff between
+        `commit` and `prev`, which is still present in the post-image of diff
+        (which means that file deletions are excluded), limited to lines changed
+        in that file.
+
+        Returns 2-element tuple, with per-path information about blamed commits
+        as the first element, and per-path list of blame information for each
+        changed line.
+
+        Example of results:
+
+            ({
+                'file': {
+                    'd860e7a706ac8aa45089111495ad7fe0004cbbfa': {
+                        'author': 'A U Thor',
+                        'author-email': '<author@example.com>',
+                        'author-time': '1693601010',
+                        'author-tz': '-0600',
+                        # ...
+                        'filename': 'file',
+                        'summary': 'Changed file'
+                    }
+                }
+            },[
+                {
+                    'commit': 'd860e7a706ac8aa45089111495ad7fe0004cbbfa',
+                    'line': 'contents of 1st line',
+                    'final': 1,
+                    'original': 1,
+                    'original_filename': 'file',
+                    # ...
+                }
+            ])
+
+        :param str commit: later (second) of two commits to compare,
+            defaults to 'HEAD', that is the current commit
+        :param prev: earlier (first) of two commits to compare,
+            defaults to None, which means comparing to parent of `commit`
+        :type prev: str or None
+        :param bool addition_optimization: whether to blame whole file
+            for files that were added between `prev` and `commit`
+        :return: information about commits blamed, and blame information
+            for each changed file
+        :rtype: (dict[str, dict], dict[str, list])
+        """
         lines_survival = {}
         all_commits_data = {}
         diff_stat = {}
