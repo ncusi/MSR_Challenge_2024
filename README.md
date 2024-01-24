@@ -204,9 +204,9 @@ The token shown above expires on Mon, Apr 15 2024.
 
 ### No cloned repositories in DVC
 
-Because DVC does not handle well dangling symlinks in directories
-to be put in DVC storage[^1] (which happens in some repositories),
-and because of space limitations, cloned repositories of projects
+Because DVC does not handle well dangling symlinks (which happens
+in some repositories) inside directories to be put in DVC storage[^1] ,
+and because of the space limitations, cloned repositories of projects
 included in the DevGPT dataset are not stored in DVC.
 
 To make it possible to depend on repositories being cloned,
@@ -231,3 +231,20 @@ either:
 See [`dvc repro` documentation](https://dvc.org/doc/command-reference/repro).
 
 [^1]: See issue [#9971](https://github.com/iterative/dvc/issues/9971) in dvc repository
+
+### Stages with checkpoints
+
+The commit_similarities, pr_similarities, and issue_similarities take
+a long time to run.  Therefore, to avoid having to re-run them if they
+are interrupted, they save their intermediate state as checkpoint file:
+`data/interim/commit_sharings_similarities_df.checkpoint_data.json`, etc.
+
+These checkpoint files are marked as persistent DVC data files, and are
+not removed at the start of the stage.
+
+Therefore, if you want to re-run those stages from scratch, you need
+to remove those checkpoint files before running the stage, for example
+with
+```cli
+rm data/interim/*.checkpoint_data.json
+```
