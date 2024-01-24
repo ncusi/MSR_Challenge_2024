@@ -144,8 +144,39 @@ flowchart TD
         node5-->node3
 ```
 
-Each of the stages is described in [`dvc.yaml`](dvc.yaml) using `desc`;
-you can get list of stages with their descriptions with `dvc stage list`:
+The notation used to describe the acyclic directed graph (DAG) of DVC pipeline
+dependencies (the goal of shich was to reduce the `dvc dag` graph size)
+is to be understood as _brace expansion_.  For example, `{c,d,b}e` expands
+to `ce`, `de`, `ce`.  This means that the following graph fragment:
+```mermaid
+flowchart LR
+    node0["clone_repos"]
+    node1["{commit,pr,issues}_agg"]
+    node2["{commit,pr,issues}_survival"]
+    node0-->node1
+    node1-->node2
+```
+is to be understood in the following way:
+```mermaid
+flowchart LR
+    node0["clone_repos"]
+    node1a["commit_agg"]
+    node2a["commit_survival"]
+    node1b["pr_agg"]
+    node2b["pr_survival"]
+    node1c["issues_agg"]
+    node2c["issues_survival"]
+    node0-->node1a
+    node0-->node1b
+    node0-->node1c
+    node1a-->node2a
+    node1b-->node2b
+    node1c-->node2c
+```
+
+Each of the stages is described in [`dvc.yaml`](dvc.yaml) using `desc` field;
+you can get list of stages with their descriptions with the `dvc stage list`
+command:
 
 | **Stage**           | **Description**                                                     |
 |---------------------|---------------------------------------------------------------------|
