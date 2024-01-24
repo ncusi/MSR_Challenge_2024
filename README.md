@@ -112,3 +112,55 @@ or it is network storage available for all people in the team.
 
 [dvc-cache-dir]: https://dvc.org/doc/command-reference/cache/dir
 [dvc-remote-storage]: https://dvc.org/doc/user-guide/data-management/remote-storage
+
+### Description of DVC stages
+
+DVC pipeline is composed of 14 stages (see [`dvc.yaml`](dvc.yaml) file).
+The stages for analyzing commit data, pull request (PR) data, and issues data
+have similar dependencies. The graph of dependencies shown below
+(created from the output of `dvc dag --md`) is therefore
+simplified for readability.
+
+```mermaid
+flowchart TD
+        node1["clone_repos"]
+        node13["repo_stats_git"]
+        node14["repo_stats_github"]
+        node2["{commit,pr,issues}_agg"]
+        node3["{commit,pr,issues}_similarities"]
+        node4["{commit,pr,pr_split,issues}_survival"]
+        node5["download_DevGPT"]
+        node1-->node2
+        node1-->node3
+        node1-->node4
+        
+        node1-->node13
+        node1-->node14
+        node2-->node3
+        node2-->node4
+        node5-->node1
+        node5-->node2
+        node5-->node3
+        node5-->node13
+        node5-->node14
+```
+
+Each of the stages is described in [`dvc.yaml`](dvc.yaml) using `desc`;
+you can get list of stages with their descriptions with `dvc stage list`:
+
+| **Stage**           | **Description**                                                     |
+|---------------------|---------------------------------------------------------------------|
+| download_DevGPT     | Download DevGPT dataset v9 from Zenodo                              |
+| clone_repos         | Clone all repositories included in DevGPT dataset                   |
+| commit_agg          | Latest commit sharings to CSV + per-project aggregates              |
+| pr_agg              | Latest pr (pull request) sharings to CSV + per-project aggregates   |
+| issue_agg           | Latest issue sharings to CSV + per-project aggregates               |
+| commit_survival     | Changes and lines survival (via blame) for latest commit sharings   |
+| pr_survival         | Changes and lines survival (via blame) for latest pr sharings       |
+| pr_split_survival   | Changes and lines survival (via blame) for pr sharings, all commits |
+| issue_survival      | Changes and lines survival (via blame) for latest issue sharings    |
+| repo_stats_git      | Repository stats from git for all cloned project repos              |
+| repo_stats_github   | Repository info from GitHub for all cloned project repos            |
+| commit_similarities | ChatGPT <-> commit diff similarities for commit sharings            |
+| pr_similarities     | ChatGPT <-> commit diff similarities for PR sharings                |
+| issue_similarities  | ChatGPT <-> commit diff similarities for issue sharings             |
