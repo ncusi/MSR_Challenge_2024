@@ -248,3 +248,22 @@ with
 ```cli
 rm data/interim/*.checkpoint_data.json
 ```
+
+
+## Jupyter Notebooks
+
+The final part of computations, and the visualization presented in the
+_"How I Learned to Stop Worrying and Love the ChatGPT"_ paper
+was done with Jupyter Notebooks in the [`notebooks/`](notebooks/)
+directory.
+
+To be able to use [installed dependencies](#installing-dependencies),
+it is recommended to start [JupyterLab][] from this project top directory
+with
+```cli
+jupyter lab --notebook-dir='.'
+```
+
+<!-- The `notebooks/` directory includes the following Jupyter Notebooks: -->
+
+[JupyterLab]: https://jupyterlab.readthedocs.io/ "JupyterLab Documentation"
