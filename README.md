@@ -61,6 +61,22 @@ those parts that were made to use **[DVC][]** (Data Version Control) tool.
 
 You can also run experiments with `dvc exp run`.
 
+**NOTE** that DVC works best in a Git repository, and is by default configured
+to require it.  If you cloned this project with Git, it should work out of
+the box; if you got this project from Figshare (<https://figshare.com/s/c88797dd7db323886442>)
+you would need to either:
+- use [DVC without Git][initializing-dvc-without-git]
+  by setting `core.no_scm` config option value to true in the [DVC configuration][dvc-configuration]
+  with `dvc config --local core.no_scm true`, or
+- run `git init` inside unpacked directory with replication package
+
+Currently, the [`init.bash`](init.bash) script does not handle this
+issue automatically.
+
+[initializing-dvc-without-git]: https://dvc.org/doc/command-reference/init#initializing-dvc-without-git "dvc init | Initializing DVC without Git"
+[dvc-configuration]: https://dvc.org/doc/user-guide/project-structure/configuration
+
+
 ### Configuring local DVC cache _(optional)_
 
 Because the initial external DevGPT dataset is quite large (it is 650 MB
