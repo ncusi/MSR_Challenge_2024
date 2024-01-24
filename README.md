@@ -63,15 +63,12 @@ You can also run experiments with `dvc exp run`.
 
 **NOTE** that DVC works best in a Git repository, and is by default configured
 to require it.  If you cloned this project with Git, it should work out of
-the box; if you got this project from Figshare (<https://figshare.com/s/c88797dd7db323886442>)
+the box; if you got this project from Figshare (<https://doi.org/10.6084/m9.figshare.24771117>)
 you would need to either:
 - use [DVC without Git][initializing-dvc-without-git]
   by setting `core.no_scm` config option value to true in the [DVC configuration][dvc-configuration]
   with `dvc config --local core.no_scm true`, or
 - run `git init` inside unpacked directory with replication package
-
-Currently, the [`init.bash`](init.bash) script does not handle this
-issue automatically.
 
 [initializing-dvc-without-git]: https://dvc.org/doc/command-reference/init#initializing-dvc-without-git "dvc init | Initializing DVC without Git"
 [dvc-configuration]: https://dvc.org/doc/user-guide/project-structure/configuration
@@ -144,8 +141,39 @@ flowchart TD
         node5-->node3
 ```
 
-Each of the stages is described in [`dvc.yaml`](dvc.yaml) using `desc`;
-you can get list of stages with their descriptions with `dvc stage list`:
+The notation used to describe the acyclic directed graph (DAG) of DVC pipeline
+dependencies (the goal of shich was to reduce the `dvc dag` graph size)
+is to be understood as _brace expansion_.  For example, `{c,d,b}e` expands
+to `ce`, `de`, `ce`.  This means that the following graph fragment:
+```mermaid
+flowchart LR
+    node0["clone_repos"]
+    node1["{commit,pr,issues}_agg"]
+    node2["{commit,pr,issues}_survival"]
+    node0-->node1
+    node1-->node2
+```
+is to be understood in the following way:
+```mermaid
+flowchart LR
+    node0["clone_repos"]
+    node1a["commit_agg"]
+    node2a["commit_survival"]
+    node1b["pr_agg"]
+    node2b["pr_survival"]
+    node1c["issues_agg"]
+    node2c["issues_survival"]
+    node0-->node1a
+    node0-->node1b
+    node0-->node1c
+    node1a-->node2a
+    node1b-->node2b
+    node1c-->node2c
+```
+
+Each of the stages is described in [`dvc.yaml`](dvc.yaml) using `desc` field;
+you can get list of stages with their descriptions with the `dvc stage list`
+command:
 
 | **Stage**           | **Description**                                                     |
 |---------------------|---------------------------------------------------------------------|
@@ -201,3 +229,69 @@ edit the following line in [`src/utils/github.py`](src/utils/github.py):
 GITHUB_API_TOKEN = "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"  # from jnareb
 ```
 The token shown above expires on Mon, Apr 15 2024.
+
+### No cloned repositories in DVC
+
+Because DVC does not handle well dangling symlinks (which happens
+in some repositories) inside directories to be put in DVC storage[^1] ,
+and because of the space limitations, cloned repositories of projects
+included in the DevGPT dataset are not stored in DVC.
+
+To make it possible to depend on repositories being cloned,
+the clone_repos stage in addition to cloning repositories also
+creates JSON file containing the summary of the results.  This file
+(`data/repositories_download_status.json`) is then used to mark
+that certain stages of DVC pipeline need to have those repositories
+cloned.  This file is stored neither in Git (thanks to `data/.gitignore`),
+not in DVC (thanks to being marked as `cache: false`).
+
+If you are interested only in modifying those stages that do not
+require cloned repositories (those that do not use `git`, see
+["_Additional stages' requirenemts_"](#additional-stages-requirements)
+section), to avoid re-running the whole DVC pipeline, you can use
+either:
+- `dvc repro --single-item <target>...`
+  to reproduce only given stages
+  by turning off the recursive search for changed dependencies, or
+- `dvc repro --downstream <starting target>...` to only execute
+  the stages after the given targets in their corresponding pipelines,
+  including the target stages themselves
+See [`dvc repro` documentation](https://dvc.org/doc/command-reference/repro).
+
+[^1]: See issue [#9971](https://github.com/iterative/dvc/issues/9971) in dvc repository
+
+### Stages with checkpoints
+
+The commit_similarities, pr_similarities, and issue_similarities take
+a long time to run.  Therefore, to avoid having to re-run them if they
+are interrupted, they save their intermediate state as checkpoint file:
+`data/interim/commit_sharings_similarities_df.checkpoint_data.json`, etc.
+
+These checkpoint files are marked as persistent DVC data files, and are
+not removed at the start of the stage.
+
+Therefore, if you want to re-run those stages from scratch, you need
+to remove those checkpoint files before running the stage, for example
+with
+```cli
+rm data/interim/*.checkpoint_data.json
+```
+
+
+## Jupyter Notebooks
+
+The final part of computations, and the visualization presented in the
+_"How I Learned to Stop Worrying and Love the ChatGPT"_ paper
+was done with Jupyter Notebooks in the [`notebooks/`](notebooks/)
+directory.
+
+To be able to use [installed dependencies](#installing-dependencies),
+it is recommended to start [JupyterLab][] from this project top directory
+with
+```cli
+jupyter lab --notebook-dir='.'
+```
+
+<!-- The `notebooks/` directory includes the following Jupyter Notebooks: -->
+
+[JupyterLab]: https://jupyterlab.readthedocs.io/ "JupyterLab Documentation"
