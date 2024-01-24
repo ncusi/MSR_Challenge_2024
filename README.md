@@ -163,3 +163,41 @@ you can get list of stages with their descriptions with `dvc stage list`:
 | commit_similarities | ChatGPT <-> commit diff similarities for commit sharings            |
 | pr_similarities     | ChatGPT <-> commit diff similarities for PR sharings                |
 | issue_similarities  | ChatGPT <-> commit diff similarities for issue sharings             |
+
+### Additional stages' requirements
+
+Running some of the DVC pipeline stages have additional requirements,
+like requiring Internet access, or having `git` installed, or a valid
+GitHub API key.
+
+The following DVC stages require Internet access to work:
+- download_DevGPT
+- clone_repos
+- pr_agg
+- issue_agg
+- repo_stats_github
+
+The following DVC stages require `git` installed to work:
+- clone_repos
+- commit_survival
+- pr_survival
+- pr_split_survival
+- issue_survival
+- repo_stats_git
+
+The following DVC stage requires GitHub API token to work,
+because it uses GitHub's GraphQL API (which requires authentication):
+- issue_agg
+
+The following DVC stages would run faster with GitHub API token,
+because of much increased limits for authenticated GitHub REST API access:
+- pr_agg
+- issue_agg
+- repo_stats_github
+
+To update or replace GitHub API token, _currently_ you will need to
+edit the following line in [`src/utils/github.py`](src/utils/github.py):
+```python
+GITHUB_API_TOKEN = "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"  # from jnareb
+```
+The token shown above expires on Mon, Apr 15 2024.
