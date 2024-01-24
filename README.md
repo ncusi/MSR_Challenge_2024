@@ -128,21 +128,20 @@ flowchart TD
         node14["repo_stats_github"]
         node2["{commit,pr,issues}_agg"]
         node3["{commit,pr,issues}_similarities"]
-        node4["{commit,pr,pr_split,issues}_survival"]
+        node4["{commit,pr,issues}_survival"]
         node5["download_DevGPT"]
+        node5-->node13
         node1-->node2
-        node1-->node3
         node1-->node4
-        
         node1-->node13
+        node5-->node14
         node1-->node14
-        node2-->node3
         node2-->node4
         node5-->node1
         node5-->node2
+        node2-->node3
+        node1-->node3
         node5-->node3
-        node5-->node13
-        node5-->node14
 ```
 
 Each of the stages is described in [`dvc.yaml`](dvc.yaml) using `desc`;
