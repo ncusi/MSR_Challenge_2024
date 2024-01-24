@@ -70,9 +70,6 @@ you would need to either:
   with `dvc config --local core.no_scm true`, or
 - run `git init` inside unpacked directory with replication package
 
-Currently, the [`init.bash`](init.bash) script does not handle this
-issue automatically.
-
 [initializing-dvc-without-git]: https://dvc.org/doc/command-reference/init#initializing-dvc-without-git "dvc init | Initializing DVC without Git"
 [dvc-configuration]: https://dvc.org/doc/user-guide/project-structure/configuration
 

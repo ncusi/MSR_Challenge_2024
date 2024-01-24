@@ -37,6 +37,8 @@ else
 EOF
 fi
 
+# try to create symlink to externally downloaded DevGPT dataset,
+# if possible, instead of having each user to re-download it
 if [ ! -e 'data/external/DevGPT' ]; then
     if [ -d "$DEVGPT_DIR" ]; then
         echo "Linking '$DEVGPT_DIR'"
@@ -47,6 +49,22 @@ if [ ! -e 'data/external/DevGPT' ]; then
 else
     echo "'data/external/DevGPT' already exists"
 fi
+
+# check if we are inside Git repository, and if it is not the case,
+# configure DVC to not require to be run from inside git repo
+INIT_SCRIPT_DIR="$(realpath "${0%/*}")"  # "$(realpath $(dirname "$0")"
+if [ "$(git rev-parse --is-inside-work-tree)" = "true" ]; then
+    GIT_REPO_TOPDIR="$(realpath "$(git rev-parse --show-toplevel)")"
+    if [ "$INIT_SCRIPT_DIR" = "$GIT_REPO_TOPDIR" ]; then
+        echo "WARNING: possibly incorrect git repository found:"
+        echo "- top directory of git repo:  $GIT_REPO_TOPDIR"
+        echo "- directory with this script: $INIT_SCRIPT_DIR"
+    fi
+else
+    echo "Not inside Git repository; configuring DVC to handle this case"
+    dvc config --local core.no_scm true
+fi
+
 
 # getting data from DVC
 echo "Retrieving data from DVC"
