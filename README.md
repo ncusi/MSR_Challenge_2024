@@ -201,3 +201,33 @@ edit the following line in [`src/utils/github.py`](src/utils/github.py):
 GITHUB_API_TOKEN = "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"  # from jnareb
 ```
 The token shown above expires on Mon, Apr 15 2024.
+
+### No cloned repositories in DVC
+
+Because DVC does not handle well dangling symlinks in directories
+to be put in DVC storage[^1] (which happens in some repositories),
+and because of space limitations, cloned repositories of projects
+included in the DevGPT dataset are not stored in DVC.
+
+To make it possible to depend on repositories being cloned,
+the clone_repos stage in addition to cloning repositories also
+creates JSON file containing the summary of the results.  This file
+(`data/repositories_download_status.json`) is then used to mark
+that certain stages of DVC pipeline need to have those repositories
+cloned.  This file is stored neither in Git (thanks to `data/.gitignore`),
+not in DVC (thanks to being marked as `cache: false`).
+
+If you are interested only in modifying those stages that do not
+require cloned repositories (those that do not use `git`, see
+["_Additional stages' requirenemts_"](#additional-stages-requirements)
+section), to avoid re-running the whole DVC pipeline, you can use
+either:
+- `dvc repro --single-item <target>...`
+  to reproduce only given stages
+  by turning off the recursive search for changed dependencies, or
+- `dvc repro --downstream <starting target>...` to only execute
+  the stages after the given targets in their corresponding pipelines,
+  including the target stages themselves
+See [`dvc repro` documentation](https://dvc.org/doc/command-reference/repro).
+
+[^1]: See issue [#9971](https://github.com/iterative/dvc/issues/9971) in dvc repository
