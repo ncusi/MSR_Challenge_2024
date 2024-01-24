@@ -63,7 +63,7 @@ You can also run experiments with `dvc exp run`.
 
 **NOTE** that DVC works best in a Git repository, and is by default configured
 to require it.  If you cloned this project with Git, it should work out of
-the box; if you got this project from Figshare (<https://figshare.com/s/c88797dd7db323886442>)
+the box; if you got this project from Figshare (<https://doi.org/10.6084/m9.figshare.24771117>)
 you would need to either:
 - use [DVC without Git][initializing-dvc-without-git]
   by setting `core.no_scm` config option value to true in the [DVC configuration][dvc-configuration]
