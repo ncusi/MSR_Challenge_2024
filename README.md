@@ -12,14 +12,14 @@ The data will be also available on [DagsHub][]:<br>
 
 ## First time setup
 
-You can set up the environment for using this project, following
-the recommended practices (described in later part of this document),
+You can set up the environment for this package, following
+the recommended practices (described later in this document),
 by running the [`init.bash`](init.bash) Bash script, and following
 its instructions.
 
 Note that this script assumes that it is run on Linux, or Linux-like
-system.  For other operating systems, you are probably better following
-the steps described in this document manually.
+system.  For other operating systems, following the steps described 
+in this document manually.
 
 ### Virtual environment
 
@@ -29,7 +29,7 @@ a [virtual environment][venv], for example with:
 python3 -m venv venv
 ```
 
-This needs to be done only once, from top directory of the project.  
+This needs to be done only once, from the top directory of the project.  
 For each session, you should activate the environment:
 ```cli
 source venv/bin/activate
@@ -37,7 +37,7 @@ source venv/bin/activate
 This would make command line prompt include "(venv) " as prefix,
 thought it depends on the shell used.
 
-Using virtual environment, either directly like shown above, or
+A virtual environment, either directly like shown above or
 by using `pipx`, might be required if you cannot install system
 packages, but Python is configured in a very specific way:
 
@@ -69,9 +69,9 @@ those parts that were made to use **[DVC][]** (Data Version Control) tool.
 You can also run experiments with `dvc exp run`.
 
 **NOTE** that DVC works best in a Git repository, and is by default configured
-to require it.  If you cloned this project with Git, it should work out of
-the box; if you got this project from Figshare (<https://doi.org/10.6084/m9.figshare.24771117>)
-you would need to either:
+to require it.  If you clone this project with Git, it will work out of
+the box; if you get this project from Figshare (<https://doi.org/10.6084/m9.figshare.24771117>)
+you will need to either:
 - use [DVC without Git][initializing-dvc-without-git]
   by setting `core.no_scm` config option value to true in the [DVC configuration][dvc-configuration]
   with `dvc config --local core.no_scm true`, or
@@ -108,11 +108,11 @@ cat <<EOF >>.dvc/config.local
 EOF
 ```
 
-Then you would be able to download computed data with `dvc pull`,
+Then you will be able to download computed data with `dvc pull`,
 and upload your results for others in the team with `dvc push`.
-This assumes that you all have access to `/mnt/data/dvcstore`,
+This assumes that all of you have access to `/mnt/data/dvcstore`,
 either via doing the work on the same host (perhaps remotely),
-or it is network storage available for all people in the team.
+or it is network storage available for the whole team.
 
 [dvc-cache-dir]: https://dvc.org/doc/command-reference/cache/dir
 [dvc-remote-storage]: https://dvc.org/doc/user-guide/data-management/remote-storage
@@ -122,8 +122,8 @@ or it is network storage available for all people in the team.
 DVC pipeline is composed of 14 stages (see [`dvc.yaml`](dvc.yaml) file).
 The stages for analyzing commit data, pull request (PR) data, and issues data
 have similar dependencies. The graph of dependencies shown below
-(created from the output of `dvc dag --md`) is therefore
-simplified for readability.
+(created from the output of `dvc dag --md`) is therefore simplified
+for readability.
 
 ```mermaid
 flowchart TD
@@ -149,7 +149,7 @@ flowchart TD
 ```
 
 The notation used to describe the acyclic directed graph (DAG) of DVC pipeline
-dependencies (the goal of shich was to reduce the `dvc dag` graph size)
+dependencies (the goal of which is to reduce the `dvc dag` graph size)
 is to be understood as _brace expansion_.  For example, `{c,d,b}e` expands
 to `ce`, `de`, `ce`.  This means that the following graph fragment:
 ```mermaid
@@ -160,7 +160,7 @@ flowchart LR
     node0-->node1
     node1-->node2
 ```
-is to be understood in the following way:
+expands in the following way:
 ```mermaid
 flowchart LR
     node0["clone_repos"]
@@ -178,8 +178,8 @@ flowchart LR
     node1c-->node2c
 ```
 
-Each of the stages is described in [`dvc.yaml`](dvc.yaml) using `desc` field;
-you can get list of stages with their descriptions with the `dvc stage list`
+Each of the stages is described in [`dvc.yaml`](dvc.yaml) using `desc` field.
+You can get list of stages with their descriptions with the `dvc stage list`
 command:
 
 | **Stage**           | **Description**                                                     |
@@ -202,8 +202,7 @@ command:
 ### Additional stages' requirements
 
 Running some of the DVC pipeline stages have additional requirements,
-like requiring Internet access, or having `git` installed, or a valid
-GitHub API key.
+like Internet access, or `git` installed, or a validGitHub API key.
 
 The following DVC stages require Internet access to work:
 - download_DevGPT
@@ -239,18 +238,18 @@ The token shown above expires on Mon, Apr 15 2024.
 
 ### No cloned repositories in DVC
 
-Because DVC does not handle well dangling symlinks (which happens
-in some repositories) inside directories to be put in DVC storage[^1] ,
-and because of the space limitations, cloned repositories of projects
-included in the DevGPT dataset are not stored in DVC.
+Cloned repositories of projects included in the DevGPT dataset 
+are not stored in DVC. This is caused by space limitations and 
+DVC inability to handle dangling symlinks inside directories 
+to be put in DVC storage[^1].
 
-To make it possible to depend on repositories being cloned,
-the clone_repos stage in addition to cloning repositories also
-creates JSON file containing the summary of the results.  This file
-(`data/repositories_download_status.json`) is then used to mark
+Therefore, the clone_repos stage clones the repositories and
+creates JSON file containing the summary of the results.  
+
+The file (`data/repositories_download_status.json`) indicates
 that certain stages of DVC pipeline need to have those repositories
-cloned.  This file is stored neither in Git (thanks to `data/.gitignore`),
-not in DVC (thanks to being marked as `cache: false`).
+cloned.  This file is neither stored in Git (thanks to 
+`data/.gitignore`), nor in DVC (since it is marked as `cache: false`).
 
 If you are interested only in modifying those stages that do not
 require cloned repositories (those that do not use `git`, see
@@ -269,8 +268,8 @@ See [`dvc repro` documentation](https://dvc.org/doc/command-reference/repro).
 
 ### Stages with checkpoints
 
-The commit_similarities, pr_similarities, and issue_similarities take
-a long time to run.  Therefore, to avoid having to re-run them if they
+The commit_similarities, pr_similarities, and issue_similarities are 
+sinficantly time consuming.  Therefore, to avoid having to re-run them if they
 are interrupted, they save their intermediate state as checkpoint file:
 `data/interim/commit_sharings_similarities_df.checkpoint_data.json`, etc.
 
@@ -288,7 +287,7 @@ rm data/interim/*.checkpoint_data.json
 ## Jupyter Notebooks
 
 The final part of computations, and the visualization presented in the
-_"How I Learned to Stop Worrying and Love the ChatGPT"_ paper
+_"How I Learned to Stop Worrying and Love ChatGPT"_ paper
 was done with Jupyter Notebooks in the [`notebooks/`](notebooks/)
 directory.
 
