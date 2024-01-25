@@ -285,13 +285,13 @@ _"How I Learned to Stop Worrying and Love the ChatGPT"_ paper
 was done with Jupyter Notebooks in the [`notebooks/`](notebooks/)
 directory.
 
-To be able to use [installed dependencies](#installing-dependencies),
-it is recommended to start [JupyterLab][] from this project top directory
-with
+Those notebooks are described in detail in [`notebooks/README.md`](notebooks/README.md).
+
+To be able to use [installed dependencies](#installing-dependencies)
+when running those notebooks, it is recommended to start [JupyterLab][]
+from this project top directory with:
 ```cli
 jupyter lab --notebook-dir='.'
 ```
-
-<!-- The `notebooks/` directory includes the following Jupyter Notebooks: -->
 
 [JupyterLab]: https://jupyterlab.readthedocs.io/ "JupyterLab Documentation"
