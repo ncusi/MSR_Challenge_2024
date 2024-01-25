@@ -3,6 +3,13 @@ Replication package for MSR'24 Mining Challenge
 
 https://2024.msrconf.org/track/msr-2024-mining-challenge
 
+The code can be found in the following repository on GitHub:<br>
+<https://github.com/ncusi/MSR_Challenge_2024><br>
+The data will be also available on [DagsHub][]:<br>
+<https://dagshub.com/ncusi/MSR_Challenge_2024>
+
+[DagsHub]: https://dagshub.com/docs/index.html "DagsHub: A Single Source of Truth for your AI Projects"
+
 ## First time setup
 
 You can set up the environment for using this project, following
@@ -285,13 +292,13 @@ _"How I Learned to Stop Worrying and Love the ChatGPT"_ paper
 was done with Jupyter Notebooks in the [`notebooks/`](notebooks/)
 directory.
 
-To be able to use [installed dependencies](#installing-dependencies),
-it is recommended to start [JupyterLab][] from this project top directory
-with
+Those notebooks are described in detail in [`notebooks/README.md`](notebooks/README.md).
+
+To be able to use [installed dependencies](#installing-dependencies)
+when running those notebooks, it is recommended to start [JupyterLab][]
+from this project top directory with:
 ```cli
 jupyter lab --notebook-dir='.'
 ```
-
-<!-- The `notebooks/` directory includes the following Jupyter Notebooks: -->
 
 [JupyterLab]: https://jupyterlab.readthedocs.io/ "JupyterLab Documentation"
