@@ -3,6 +3,13 @@ Replication package for MSR'24 Mining Challenge
 
 https://2024.msrconf.org/track/msr-2024-mining-challenge
 
+The code can be found in the following repository on GitHub:<br>
+<https://github.com/ncusi/MSR_Challenge_2024><br>
+The data will be also available on [DagsHub][]:<br>
+<https://dagshub.com/ncusi/MSR_Challenge_2024>
+
+[DagsHub]: https://dagshub.com/docs/index.html "DagsHub: A Single Source of Truth for your AI Projects"
+
 ## First time setup
 
 You can set up the environment for using this project, following
