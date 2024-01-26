@@ -1,4 +1,5 @@
 # How I Learned to Stop Worrying and Love ChatGPT
+
 Replication package for MSR'24 Mining Challenge
 
 https://2024.msrconf.org/track/msr-2024-mining-challenge
@@ -8,7 +9,11 @@ The code can be found in the following repository on GitHub:<br>
 The data will be also available on [DagsHub][]:<br>
 <https://dagshub.com/ncusi/MSR_Challenge_2024>
 
+If you find any errors in the code, or have trouble getting it to run,
+please send the bugreport via [this project GitHub issues][issues].
+
 [DagsHub]: https://dagshub.com/docs/index.html "DagsHub: A Single Source of Truth for your AI Projects"
+[issues]: https://github.com/ncusi/MSR_Challenge_2024/issues "Issues · ncusi/MSR_Challenge_2024"
 
 ## First time setup
 
@@ -17,29 +22,41 @@ the recommended practices (described later in this document),
 by running the [`init.bash`](init.bash) Bash script, and following
 its instructions.
 
+You can configure where this script intends to put local DVC cache etc.
+by editing values of variables at the top of the script,
+in the _configuration_ block
+```shell
+# configuration
+DVCSTORE_DIR='/mnt/data/dvcstore'
+DEVGPT_DIR='/mnt/data/MSR_Challenge_2024/DevGPT-data.v9'
+
+```
+
 Note that this script assumes that it is run on Linux, or Linux-like
-system.  For other operating systems, following the steps described 
-in this document manually.
+system.  For other operating systems, it might be better to follow
+the steps described in this document manually.
 
 ### Virtual environment
 
 To avoid dependency conflicts, it is strongly recommended to create
-a [virtual environment][venv], for example with:
+a [virtual environment][venv].  This can be done with, for example:
 ```cli
 python3 -m venv venv
 ```
 
 This needs to be done only once, from the top directory of the project.  
-For each session, you should activate the environment:
+For each session, you should activate this virtual environment:
 ```cli
 source venv/bin/activate
 ```
 This would make command line prompt include "(venv) " as prefix,
 thought it depends on the shell used.
 
-A virtual environment, either directly like shown above or
+Using virtual environment, either directly like shown above or
 by using `pipx`, might be required if you cannot install system
-packages, but Python is configured in a very specific way:
+packages, but Python is configured in a very specific way.
+Namely, if running `pip install --user` results in the following
+error:
 
 > error: externally-managed-environment
 >
@@ -50,7 +67,7 @@ packages, but Python is configured in a very specific way:
 ### Installing dependencies
 
 You can install dependencies defined in [requirements.txt][] file
-with `pip` using the following command:
+with `pip`, using the following command:
 ```cli
 python -m pip install -r requirements.txt
 ```
@@ -84,7 +101,7 @@ you will need to either:
 ### Configuring local DVC cache _(optional)_
 
 Because the initial external DevGPT dataset is quite large (it is 650 MB
-as *.zip file, and 3.9 GB uncompressed into directory), you might want
+as *.zip file, and is 3.9 GB uncompressed), you might want
 to store DVC cache in some other place than your home repository.
 
 You can do that with [`dvc cache dir`][dvc-cache-dir] command:
@@ -122,7 +139,7 @@ or it is network storage available for the whole team.
 DVC pipeline is composed of 14 stages (see [`dvc.yaml`](dvc.yaml) file).
 The stages for analyzing commit data, pull request (PR) data, and issues data
 have similar dependencies. The graph of dependencies shown below
-(created from the output of `dvc dag --md`) is therefore simplified
+(created from the output of `dvc dag --mermaid`) is therefore simplified
 for readability.
 
 ```mermaid
@@ -148,7 +165,7 @@ flowchart TD
         node5-->node3
 ```
 
-The notation used to describe the acyclic directed graph (DAG) of DVC pipeline
+The notation used here to describe the acyclic directed graph (DAG) of DVC pipeline
 dependencies (the goal of which is to reduce the `dvc dag` graph size)
 is to be understood as _brace expansion_.  For example, `{c,d,b}e` expands
 to `ce`, `de`, `ce`.  This means that the following graph fragment:
@@ -202,7 +219,7 @@ command:
 ### Additional stages' requirements
 
 Running some of the DVC pipeline stages have additional requirements,
-like Internet access, or `git` installed, or a validGitHub API key.
+like Internet access, or `git` installed, or a valid GitHub API key.
 
 The following DVC stages require Internet access to work:
 - download_DevGPT
@@ -240,13 +257,13 @@ The token shown above expires on Mon, Apr 15 2024.
 
 Cloned repositories of projects included in the DevGPT dataset 
 are not stored in DVC. This is caused by space limitations and 
-DVC inability to handle dangling symlinks inside directories 
+by DVC inability to handle dangling symlinks inside directories 
 to be put in DVC storage[^1].
 
 Therefore, the clone_repos stage clones the repositories and
 creates JSON file containing the summary of the results.  
 
-The file (`data/repositories_download_status.json`) indicates
+The file in question (`data/repositories_download_status.json`) indicates
 that certain stages of DVC pipeline need to have those repositories
 cloned.  This file is neither stored in Git (thanks to 
 `data/.gitignore`), nor in DVC (since it is marked as `cache: false`).
@@ -269,7 +286,7 @@ See [`dvc repro` documentation](https://dvc.org/doc/command-reference/repro).
 ### Stages with checkpoints
 
 The commit_similarities, pr_similarities, and issue_similarities are 
-sinficantly time consuming.  Therefore, to avoid having to re-run them if they
+signficantly time-consuming.  Therefore, to avoid having to re-run them if they
 are interrupted, they save their intermediate state as checkpoint file:
 `data/interim/commit_sharings_similarities_df.checkpoint_data.json`, etc.
 
@@ -286,9 +303,9 @@ rm data/interim/*.checkpoint_data.json
 
 ## Jupyter Notebooks
 
-The final part of computations, and the visualization presented in the
+The final part of computations, and visualizations presented in the
 _"How I Learned to Stop Worrying and Love ChatGPT"_ paper
-was done with Jupyter Notebooks in the [`notebooks/`](notebooks/)
+was done with Jupyter Notebooks residing in the [`notebooks/`](notebooks/)
 directory.
 
 Those notebooks are described in detail in [`notebooks/README.md`](notebooks/README.md).
