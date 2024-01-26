@@ -1,7 +1,7 @@
 # Jupyter Notebooks
 
 Jupyter Notebooks used to compute and visualize data used in the
-_"How I Learned to Stop Worrying and Love the ChatGPT"_ paper
+_"How I Learned to Stop Worrying and Love ChatGPT"_ paper
 submitted and accepted for MSR'24 Mining Challenge
 https://2024.msrconf.org/track/msr-2024-mining-challenge
 
@@ -23,7 +23,7 @@ This directory includes the following notebooks:
   using bootstrapping) of the results of 'repo_stats_git' and 'repo_stats_github'
   stages in DVC pipeline.  Used to create **Table 2**.
 
-- [`survival.ipynb`](survival.ipynb) does the statistical analysis
+- [`DevGPT_conversations_stats.ipynb`](DevGPT_conversations_stats.ipynb) does the statistical analysis
   (with bootstrap) of the results of various '*_survival' stages in DVC pipeline,
   and computes various statistics of the DevGPT dataset.
   Used to create **Table 1**.
@@ -40,4 +40,4 @@ This directory includes the following notebooks:
 
 [^2]: Relevant changeset is the diff of commit in commit sharings,
       and changes brought by the pull request in PR sharings;
-      issue sharings are handled like commit or pull request closing them. 
+      issue sharings are handled like commit or pull request closing them.
