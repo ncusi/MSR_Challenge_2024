@@ -8,7 +8,11 @@ The code can be found in the following repository on GitHub:<br>
 The data will be also available on [DagsHub][]:<br>
 <https://dagshub.com/ncusi/MSR_Challenge_2024>
 
+If you find any errors in the code, or have trouble getting it to run,
+please send the bugreport via [this project GitHub issues][issues].
+
 [DagsHub]: https://dagshub.com/docs/index.html "DagsHub: A Single Source of Truth for your AI Projects"
+[issues]: https://github.com/ncusi/MSR_Challenge_2024/issues "Issues · ncusi/MSR_Challenge_2024"
 
 ## First time setup
 
