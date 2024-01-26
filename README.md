@@ -21,9 +21,19 @@ the recommended practices (described later in this document),
 by running the [`init.bash`](init.bash) Bash script, and following
 its instructions.
 
+You can configure where this script intends to put local DVC cache etc.
+by editing values of variables at the top of the script,
+in the _configuration_ block
+```shell
+# configuration
+DVCSTORE_DIR='/mnt/data/dvcstore'
+DEVGPT_DIR='/mnt/data/MSR_Challenge_2024/DevGPT-data.v9'
+
+```
+
 Note that this script assumes that it is run on Linux, or Linux-like
-system.  For other operating systems, following the steps described 
-in this document manually.
+system.  For other operating systems, it might be better to follow
+the steps described in this document manually.
 
 ### Virtual environment
 
