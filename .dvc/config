@@ -1,0 +1,3 @@
+['remote "dagshub"']
+    url = s3://dvc
+    endpointurl = https://dagshub.com/ncusi/MSR_Challenge_2024.s3
