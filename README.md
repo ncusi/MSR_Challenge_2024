@@ -1,5 +1,7 @@
 # How I Learned to Stop Worrying and Love ChatGPT
 
+https://2024.msrconf.org/details/msr-2024-mining-challenge/6/How-I-Learned-to-Stop-Worrying-and-Love-ChatGPT
+
 Replication package for MSR'24 Mining Challenge
 
 https://2024.msrconf.org/track/msr-2024-mining-challenge
