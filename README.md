@@ -8,7 +8,7 @@ https://2024.msrconf.org/track/msr-2024-mining-challenge
 
 The code can be found in the following repository on GitHub:<br>
 <https://github.com/ncusi/MSR_Challenge_2024><br>
-The data will be also available on [DagsHub][]:<br>
+The data is also available on [DagsHub][]:<br>
 <https://dagshub.com/ncusi/MSR_Challenge_2024>
 
 If you find any errors in the code, or have trouble getting it to run,
@@ -99,6 +99,20 @@ you will need to either:
 [initializing-dvc-without-git]: https://dvc.org/doc/command-reference/init#initializing-dvc-without-git "dvc init | Initializing DVC without Git"
 [dvc-configuration]: https://dvc.org/doc/user-guide/project-structure/configuration
 
+### Using DagsHub DVC remote
+
+You can download all data except for cloned repositories
+(see below for the explanation why they are excluded)
+from [DagsHub][].  The DVC remote that points to
+<https://dagshub.com/ncusi/MSR_Challenge_2024>
+is called "dagshub".
+
+You can use [`dvc pull`][dvc-pull] for that:
+```cli
+dvc pull --remote dagshub
+```
+
+[dvc-pull]: https://dvc.org/doc/command-reference/pull "dvc pull - Download tracked files or directories from remote storage"
 
 ### Configuring local DVC cache _(optional)_
 
